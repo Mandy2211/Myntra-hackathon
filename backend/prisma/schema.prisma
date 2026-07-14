@@ -1,0 +1,54 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  phone        String   @unique
+  passwordHash String
+  role         String   @default("CUSTOMER") // CUSTOMER or SELLER
+  city         String   @default("Coimbatore")
+  name         String?
+  createdAt    DateTime @default(now())
+}
+
+model Product {
+  id          String     @id
+  name        String
+  img         String     // Semicolon-separated image URLs
+  asin        String?
+  price       Float
+  mrp         Float
+  rating      Float
+  ratingTotal Int
+  discount    String
+  seller      String
+  purl        String
+  category    String     // Catalog category (e.g. Ethnic, Casual, Sportswear)
+  tags        String[]   // Array of tags (e.g. ['cotton', 'silk', 'festive'])
+  purchases   Purchase[]
+}
+
+model CityContext {
+  id             Int      @id @default(autoincrement())
+  cityName       String   @unique
+  climate        String   // e.g., humid, moderate, hot, cold
+  activeFestival String   // e.g., Pongal, Chhath Puja, Ugadi, etc.
+  preferredTags  String[] // tags to priority-sort when this city is selected
+}
+
+model Purchase {
+  id        String   @id @default(uuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  cityName  String
+  createdAt DateTime @default(now())
+}
