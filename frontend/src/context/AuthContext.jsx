@@ -41,14 +41,14 @@ export const AuthProvider = ({ children }) => {
     fetchProfile();
   }, [token]);
 
-  const login = async (phone, password) => {
+  const login = async (email, password) => {
     setError('');
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, password })
+        body: JSON.stringify({ email, password })
       });
 
       const data = await res.json();
@@ -69,14 +69,14 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const register = async (phone, password, role, name, city) => {
+  const register = async (userData) => {
     setError('');
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, password, role, name, city })
+        body: JSON.stringify(userData) // contains email, password, name, gender, city, state, language
       });
 
       const data = await res.json();
@@ -85,8 +85,11 @@ export const AuthProvider = ({ children }) => {
         throw new Error(data.error || 'Registration failed');
       }
 
-      // Do not auto-login on register, let user go to login screen
-      return data;
+      localStorage.setItem('token', data.token);
+      setToken(data.token);
+      setUser(data.user);
+      
+      return data.user;
     } catch (err) {
       setError(err.message);
       throw err;
@@ -105,14 +108,17 @@ export const AuthProvider = ({ children }) => {
     if (!user) return;
     try {
       // Opt-in sync with backend profile database record
-      setUser(prev => ({ ...prev, city: cityName, exactLocation }));
-      await fetch(`${API_BASE}/auth/login`, {
-        method: 'POST',
+      // exactLocation from Nominatim contains address.state which we can use to update the regional baseline
+      const stateUpdate = exactLocation?.addressInfo?.state || user.state;
+      
+      setUser(prev => ({ ...prev, city: cityName, state: stateUpdate, exactLocation }));
+      await fetch(`${API_BASE}/auth/profile`, {
+        method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}` 
         },
-        body: JSON.stringify({ phone: user.phone, city: cityName })
+        body: JSON.stringify({ city: cityName, state: stateUpdate })
       });
     } catch (err) {
       console.error('Failed to sync updated location to server:', err);

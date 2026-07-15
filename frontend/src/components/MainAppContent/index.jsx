@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { ShoppingBag, MapPin, User as UserIcon, LogOut } from 'lucide-react';
 import { fetchCities } from '../../services/api';
+import DynamicShelf from '../DynamicShelf';
 
 export default function MainAppContent() {
   const { user, logout, updateCity } = useAuth();
@@ -215,8 +216,8 @@ export default function MainAppContent() {
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-8 py-12 flex flex-col items-center justify-center">
-        <h2 className="text-4xl font-bold text-slate-100 tracking-tight">dashboard</h2>
+      <main className="flex-1 w-full mx-auto px-4 sm:px-8 py-10 relative">
+        <DynamicShelf />
       </main>
     </div>
   );

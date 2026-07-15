@@ -7,7 +7,7 @@ export default function Login() {
   const { login, error, setError } = useAuth();
   const navigate = useNavigate();
   
-  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -15,10 +15,6 @@ export default function Login() {
     e.preventDefault();
     setError('');
     
-    if (phone.length < 10) {
-      setError('Please enter a valid phone number');
-      return;
-    }
     if (password.length < 4) {
       setError('Password must be at least 4 characters');
       return;
@@ -26,7 +22,7 @@ export default function Login() {
 
     setLoading(true);
     try {
-      await login(phone, password);
+      await login(email, password);
       // AuthContext Navigate to / handles redirect upon user login implicitly, but we let state take over
     } catch (err) {
       console.error(err);
@@ -121,7 +117,7 @@ export default function Login() {
           <div className="space-y-6">
             <div>
               <h3 className="text-lg font-bold text-slate-100">Welcome back</h3>
-              <p className="text-xs text-slate-400 mt-1">Log in using your registered mobile number</p>
+              <p className="text-xs text-slate-400 mt-1">Log in using your registered email address</p>
             </div>
 
             {error && (
@@ -131,18 +127,18 @@ export default function Login() {
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Phone Number</label>
+              <div className="space-y-1.5 focus-within:text-pink-400">
+                <label className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Email Address</label>
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500">
                     <Smartphone className="w-4 h-4" />
                   </span>
                   <input 
-                    type="text" 
-                    placeholder="10-digit mobile number"
-                    className="w-full bg-slate-950 text-slate-100 border border-slate-700/60 focus:border-pink-500 rounded-xl py-2.5 pl-10 pr-4 text-xs focus:outline-none transition-all duration-200 focus:ring-1 focus:ring-pink-500"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                    type="email" 
+                    placeholder="email@example.com"
+                    className="w-full bg-slate-950 text-white border border-slate-700/60 focus:border-pink-500 rounded-xl py-2.5 pl-10 pr-4 text-xs focus:outline-none transition-all duration-200 focus:ring-1 focus:ring-pink-500"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     required
                   />
                 </div>

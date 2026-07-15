@@ -11,19 +11,21 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(uuid())
-  phone        String   @unique
-  passwordHash String
-  role         String   @default("CUSTOMER") // CUSTOMER or SELLER
-  city         String   @default("Coimbatore")
-  name         String?
-  createdAt    DateTime @default(now())
+  id         String   @id @default(uuid())
+  name       String
+  email      String   @unique
+  password   String
+  gender     String
+  city       String
+  state      String
+  language   String
+  created_at DateTime @default(now())
 }
 
 model Product {
-  id          String     @id
+  id          String   @id
   name        String
-  img         String     // Semicolon-separated image URLs
+  img         String
   asin        String?
   price       Float
   mrp         Float
@@ -32,23 +34,34 @@ model Product {
   discount    String
   seller      String
   purl        String
-  category    String     // Catalog category (e.g. Ethnic, Casual, Sportswear)
-  tags        String[]   // Array of tags (e.g. ['cotton', 'silk', 'festive'])
-  purchases   Purchase[]
+
+  context     ProductContext?
 }
 
-model CityContext {
-  id             Int      @id @default(autoincrement())
-  cityName       String   @unique
-  climate        String   // e.g., humid, moderate, hot, cold
-  activeFestival String   // e.g., Pongal, Chhath Puja, Ugadi, etc.
-  preferredTags  String[] // tags to priority-sort when this city is selected
+model ProductContext {
+  product_id      String  @id
+  gender_category String
+  category        String
+  macro_category  String  @default("Clothing")
+  material        String
+  occasion        String
+  season          String
+  climate         String  @default("Neutral")
+  product         Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
 }
 
-model Purchase {
-  id        String   @id @default(uuid())
-  productId String
-  product   Product  @relation(fields: [productId], references: [id])
-  cityName  String
-  createdAt DateTime @default(now())
+model WeatherCache {
+  city         String   @id
+  temperature  Float
+  weather      String
+  last_updated DateTime @default(now())
+}
+
+model FestivalCalendar {
+  id            Int      @id @default(autoincrement())
+  festival_name String
+  state         String
+  start_date    DateTime
+  end_date      DateTime
+  type          String   @default("Normal")
 }
