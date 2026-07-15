@@ -5,7 +5,8 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-
+const PORT = process.env.PORT || 5000;
+const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-here-123';
 
 const app = express();
 app.use(cors());
@@ -143,13 +144,37 @@ app.get('/api/homepage/shelves', async (req, res) => {
       console.error('Weather fetch failed', e);
     }
 
+    // Weather Logic Builder
+    let weatherWhere = {
+      climate: climate,
+      gender: { contains: targetGender, mode: 'insensitive' }
+    };
+    
+    // Explicit overrides for higher relevance based on climate
+    if (climate === 'Hot') {
+      weatherWhere.OR = [
+        { material: { contains: 'Cotton', mode: 'insensitive' } },
+        { material: { contains: 'Linen', mode: 'insensitive' } },
+        { category: { contains: 'Shorts', mode: 'insensitive' } },
+        { category: { contains: 'Dress', mode: 'insensitive' } },
+        { name: { contains: 'Frock', mode: 'insensitive' } }
+      ];
+    } else if (climate === 'Cold') {
+      weatherWhere.OR = [
+        { material: { contains: 'Wool', mode: 'insensitive' } },
+        { category: { contains: 'Jacket', mode: 'insensitive' } },
+        { category: { contains: 'Sweatshirt', mode: 'insensitive' } },
+        { category: { contains: 'Sweater', mode: 'insensitive' } }
+      ];
+    }
+
     // Weather Picks
     const weatherPicks = await prisma.product.findMany({
-      where: {
-        climate: climate,
-        gender: { contains: targetGender, mode: 'insensitive' }
-      },
-      orderBy: { weather_priority: 'desc' },
+      where: weatherWhere,
+      orderBy: [
+        { weather_priority: 'desc' },
+        { rating: 'desc' }
+      ],
       take: 15
     });
 
