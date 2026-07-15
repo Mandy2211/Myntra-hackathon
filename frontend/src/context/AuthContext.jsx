@@ -69,14 +69,14 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const register = async (userData) => {
+  const register = async (email, password, role, name, city, state, gender) => {
     setError('');
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(userData) // contains email, password, name, gender, city, state, language
+        body: JSON.stringify({ email, password, role, name, city, state, gender })
       });
 
       const data = await res.json();
@@ -108,17 +108,14 @@ export const AuthProvider = ({ children }) => {
     if (!user) return;
     try {
       // Opt-in sync with backend profile database record
-      // exactLocation from Nominatim contains address.state which we can use to update the regional baseline
-      const stateUpdate = exactLocation?.addressInfo?.state || user.state;
-      
-      setUser(prev => ({ ...prev, city: cityName, state: stateUpdate, exactLocation }));
-      await fetch(`${API_BASE}/auth/profile`, {
-        method: 'PUT',
+      setUser(prev => ({ ...prev, city: cityName, state: exactLocation?.addressInfo?.state || prev.state }));
+      await fetch(`${API_BASE}/auth/login`, {
+        method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}` 
         },
-        body: JSON.stringify({ city: cityName, state: stateUpdate })
+        body: JSON.stringify({ email: user.email, city: cityName, state: exactLocation })
       });
     } catch (err) {
       console.error('Failed to sync updated location to server:', err);

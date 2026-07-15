@@ -1,7 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { ShoppingBag, Sparkles, DollarSign, TrendingUp, Shield, Lock, User as UserIcon, Mail } from 'lucide-react';
+
+const LOCATION_DATA = {
+  "Tamil Nadu": ["Chennai", "Coimbatore", "Madurai", "Trichy", "Salem"],
+  "Maharashtra": ["Mumbai", "Pune", "Nagpur", "Nashik", "Aurangabad"],
+  "Karnataka": ["Bengaluru", "Mysuru", "Hubballi", "Mangaluru", "Belagavi"],
+  "Delhi": ["New Delhi"],
+  "Bihar": ["Patna", "Gaya", "Bhagalpur", "Muzaffarpur"],
+  "Andhra Pradesh": ["Visakhapatnam", "Vijayawada", "Guntur", "Nellore"],
+  "Gujarat": ["Ahmedabad", "Surat", "Vadodara", "Rajkot"],
+  "West Bengal": ["Kolkata", "Howrah", "Durgapur", "Asansol"],
+  "Uttar Pradesh": ["Lucknow", "Kanpur", "Varanasi", "Agra", "Noida"]
+};
 
 export default function Signup() {
   const { register, error, setError } = useAuth();
@@ -10,29 +22,46 @@ export default function Signup() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [role, setRole] = useState('CUSTOMER'); // CUSTOMER vs SELLER
   const [gender, setGender] = useState('');
-  const [city, setCity] = useState('');
-  const [state, setState] = useState('');
-  const [language, setLanguage] = useState('');
+  const [state, setStateName] = useState('');
+  const [city, setCityName] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // If state changes and the selected city is no longer valid, reset city
+  useEffect(() => {
+    if (state && LOCATION_DATA[state]) {
+      if (!LOCATION_DATA[state].includes(city)) {
+        setCityName('');
+      }
+    }
+  }, [state]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     
-    if (!email || !password || !name || !gender || !city || !state || !language) {
-      setError('Please fill in all the details');
+    if (email.length < 5 || !email.includes('@')) {
+      setError('Please enter a valid email address');
       return;
     }
     if (password.length < 4) {
       setError('Password must be at least 4 characters');
       return;
     }
+    if (!gender) {
+      setError('Please select a gender preference');
+      return;
+    }
+    if (!state || !city) {
+      setError('Please select both state and city');
+      return;
+    }
 
     setLoading(true);
     try {
-      await register({ name, email, password, gender, city, state, language });
-      navigate('/'); // Go directly to dashboard as login is implicit on return
+      await register(email, password, role, name, city, state, gender);
+      navigate('/login');
     } catch (err) {
       console.error(err);
     } finally {
@@ -43,15 +72,16 @@ export default function Signup() {
   return (
     <div className="min-h-screen bg-slate-950 flex justify-center items-center p-4 sm:p-6 md:p-8 font-sans relative overflow-hidden">
       
-      {/* Background glowing gradients */}
       <div className="absolute top-1/4 left-1/4 w-80 h-80 bg-pink-700/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-purple-750/10 rounded-full blur-3xl pointer-events-none" />
       
-      {/* Split screen outer container */}
       <div className="max-w-4xl w-full bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl flex flex-col md:flex-row z-10">
         
-        {/* Left Pane: Marketing */}
-        <div className="md:w-1/2 bg-gradient-to-br from-pink-950/70 via-purple-950/60 to-slate-900 p-8 sm:p-12 flex flex-col justify-between border-b md:border-b-0 md:border-r border-slate-800 relative z-10">
+        {/* Left Pane */}
+        <div className="md:w-1/2 bg-gradient-to-br from-pink-950/70 via-purple-950/60 to-slate-900 p-8 sm:p-12 flex flex-col justify-between border-b md:border-b-0 md:border-r border-slate-850 relative">
+          
+          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
+          
           <div className="relative space-y-8">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-gradient-to-r from-pink-500 to-rose-500 rounded-xl text-white shadow-lg">
@@ -101,33 +131,36 @@ export default function Signup() {
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5 focus-within:text-pink-400">
-                  <label className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Full Name</label>
+              <div className="space-y-1.5">
+                <label className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Email Address</label>
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500">
+                    <Smartphone className="w-4 h-4" />
+                  </span>
                   <input 
-                    type="text" placeholder="Full name"
-                    className="w-full bg-slate-950 text-white border border-slate-700/60 focus:border-pink-500 rounded-xl py-2.5 px-4 text-xs focus:outline-none transition-all duration-200"
-                    value={name} onChange={(e) => setName(e.target.value)} required
-                  />
-                </div>
-                <div className="space-y-1.5 focus-within:text-pink-400">
-                  <label className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Email</label>
-                  <input 
-                    type="email" placeholder="Email address"
-                    className="w-full bg-slate-950 text-white border border-slate-700/60 focus:border-pink-500 rounded-xl py-2.5 px-4 text-xs focus:outline-none transition-all duration-200"
-                    value={email} onChange={(e) => setEmail(e.target.value)} required
+                    type="email" 
+                    placeholder="yourname@domain.com"
+                    className="w-full bg-slate-950 text-slate-100 border border-slate-700/60 focus:border-pink-500 rounded-xl py-2.5 pl-10 pr-4 text-xs focus:outline-none transition-all duration-200 focus:ring-1 focus:ring-pink-500"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                 <div className="space-y-1.5 focus-within:text-pink-400">
-                  <label className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Password</label>
+              <div className="space-y-1.5">
+                <label className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Password</label>
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500">
+                    <Lock className="w-4 h-4" />
+                  </span>
                   <input 
-                    type="password" placeholder="Password"
-                    className="w-full bg-slate-950 text-white border border-slate-700/60 focus:border-pink-500 rounded-xl py-2.5 px-4 text-xs focus:outline-none transition-all duration-200"
-                    value={password} onChange={(e) => setPassword(e.target.value)} required
+                    type="password" 
+                    placeholder="Enter secure password"
+                    className="w-full bg-slate-950 text-slate-100 border border-slate-700/60 focus:border-pink-500 rounded-xl py-2.5 pl-10 pr-4 text-xs focus:outline-none transition-all duration-200 focus:ring-1 focus:ring-pink-500"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
                   />
                 </div>
                 <div className="space-y-1.5 focus-within:text-pink-400">
@@ -163,39 +196,71 @@ export default function Signup() {
                     <option value="Telangana">Telangana</option>
                   </select>
                 </div>
-                <div className="space-y-1.5 focus-within:text-pink-400">
-                  <label className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">City</label>
-                  <select 
-                    value={city} onChange={(e) => setCity(e.target.value)} required
-                    className="w-full bg-slate-950 text-white border border-slate-700/60 focus:border-pink-500 rounded-xl py-2.5 px-3 text-xs focus:outline-none transition-all"
-                  >
-                    <option value="" disabled>Select City</option>
-                    <option value="Visakhapatnam">Visakhapatnam (AP)</option>
-                    <option value="Mumbai">Mumbai (MH)</option>
-                    <option value="Chennai">Chennai (TN)</option>
-                    <option value="Bangalore">Bangalore (KA)</option>
-                    <option value="Kochi">Kochi (KL)</option>
-                    <option value="Delhi">Delhi (DL)</option>
-                    <option value="Ahmedabad">Ahmedabad (GJ)</option>
-                    <option value="Kolkata">Kolkata (WB)</option>
-                    <option value="Hyderabad">Hyderabad (TG)</option>
-                    <option value="Coimbatore">Coimbatore (TN)</option>
-                  </select>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] text-slate-405 font-bold uppercase tracking-widest">Platform Role</label>
+                    <select 
+                      value={role}
+                      onChange={(e) => setRole(e.target.value)}
+                      className="w-full bg-slate-950 text-slate-100 border border-slate-700/60 focus:border-pink-500 rounded-xl py-2.5 px-3 text-xs focus:outline-none transition-all duration-200 focus:ring-1 focus:ring-pink-500"
+                    >
+                      <option value="CUSTOMER" className="bg-slate-900 text-slate-100">Customer</option>
+                      <option value="SELLER" className="bg-slate-900 text-slate-100">Seller</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] text-slate-405 font-bold uppercase tracking-widest">Gender</label>
+                    <select 
+                      value={gender}
+                      onChange={(e) => setGender(e.target.value)}
+                      className="w-full bg-slate-950 text-slate-100 border border-slate-700/60 focus:border-pink-500 rounded-xl py-2.5 px-3 text-xs focus:outline-none transition-all duration-200 focus:ring-1 focus:ring-pink-500"
+                      required
+                    >
+                      <option value="" disabled className="bg-slate-900 text-slate-400">Select Gender</option>
+                      <option value="Men" className="bg-slate-900 text-slate-100">Men</option>
+                      <option value="Women" className="bg-slate-900 text-slate-100">Women</option>
+                      <option value="Unisex" className="bg-slate-900 text-slate-100">Unisex</option>
+                      <option value="Boys" className="bg-slate-900 text-slate-100">Boys</option>
+                      <option value="Girls" className="bg-slate-900 text-slate-100">Girls</option>
+                    </select>
+                  </div>
                 </div>
-                <div className="space-y-1.5 focus-within:text-pink-400">
-                  <label className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Language</label>
-                  <select 
-                    value={language} onChange={(e) => setLanguage(e.target.value)} required
-                    className="w-full bg-slate-950 text-white border border-slate-700/60 focus:border-pink-500 rounded-xl py-2.5 px-2 text-xs focus:outline-none transition-all"
-                  >
-                    <option value="" disabled>Select</option>
-                    <option value="English">English</option>
-                    <option value="Hindi">Hindi</option>
-                    <option value="Tamil">Tamil</option>
-                    <option value="Telugu">Telugu</option>
-                    <option value="Kannada">Kannada</option>
-                  </select>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] text-slate-405 font-bold uppercase tracking-widest">Active State</label>
+                    <select 
+                      value={state}
+                      onChange={(e) => setStateName(e.target.value)}
+                      className="w-full bg-slate-950 text-slate-100 border border-slate-700/60 focus:border-pink-500 rounded-xl py-2.5 px-3 text-xs focus:outline-none transition-all duration-200 focus:ring-1 focus:ring-pink-555"
+                      required
+                    >
+                      <option value="" disabled className="bg-slate-900 text-slate-400">Select state</option>
+                      {Object.keys(LOCATION_DATA).map(st => (
+                        <option key={st} value={st} className="bg-slate-900 text-slate-100">{st}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] text-slate-405 font-bold uppercase tracking-widest">Active City</label>
+                    <select 
+                      value={city}
+                      onChange={(e) => setCityName(e.target.value)}
+                      className="w-full bg-slate-950 text-slate-100 border border-slate-700/60 focus:border-pink-500 rounded-xl py-2.5 px-3 text-xs focus:outline-none transition-all duration-200 focus:ring-1 focus:ring-pink-555 disabled:opacity-50"
+                      disabled={!state}
+                      required
+                    >
+                      <option value="" disabled className="bg-slate-900 text-slate-400">Select city</option>
+                      {state && LOCATION_DATA[state]?.map(c => (
+                        <option key={c} value={c} className="bg-slate-900 text-slate-100">{c}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
+
               </div>
 
               <button 

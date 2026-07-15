@@ -15,6 +15,10 @@ export default function Login() {
     e.preventDefault();
     setError('');
     
+    if (email.length < 5 || !email.includes('@')) {
+      setError('Please enter a valid email address');
+      return;
+    }
     if (password.length < 4) {
       setError('Password must be at least 4 characters');
       return;
@@ -127,7 +131,7 @@ export default function Login() {
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-1.5 focus-within:text-pink-400">
+              <div className="space-y-1.5">
                 <label className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Email Address</label>
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500">
@@ -135,8 +139,8 @@ export default function Login() {
                   </span>
                   <input 
                     type="email" 
-                    placeholder="email@example.com"
-                    className="w-full bg-slate-950 text-white border border-slate-700/60 focus:border-pink-500 rounded-xl py-2.5 pl-10 pr-4 text-xs focus:outline-none transition-all duration-200 focus:ring-1 focus:ring-pink-500"
+                    placeholder="yourname@domain.com"
+                    className="w-full bg-slate-950 text-slate-100 border border-slate-700/60 focus:border-pink-500 rounded-xl py-2.5 pl-10 pr-4 text-xs focus:outline-none transition-all duration-200 focus:ring-1 focus:ring-pink-500"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
