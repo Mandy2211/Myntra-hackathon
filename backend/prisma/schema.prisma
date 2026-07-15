@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -14,16 +11,16 @@ model User {
   id           String   @id @default(uuid())
   email        String   @unique
   passwordHash String
-  role         String   @default("CUSTOMER") // CUSTOMER or SELLER
-  gender       String   @default("Men")
+  role         String   @default("CUSTOMER")
   city         String   @default("Coimbatore")
   state        String   @default("Tamil Nadu")
   name         String?
   createdAt    DateTime @default(now())
+  gender       String   @default("Men")
 }
 
 model Product {
-  id                String   @id
+  id                String     @id
   name              String
   img               String
   asin              String?
@@ -46,33 +43,22 @@ model Product {
   weather_priority  Int?
   festival_priority Int?
   confidence        Float?
-  purchases   Purchase[]
+  Purchase          Purchase[]
 }
 
-model ProductContext {
-  product_id      String  @id
-  gender_category String
-  category        String
-  macro_category  String  @default("Clothing")
-  material        String
-  occasion        String
-  season          String
-  climate         String  @default("Neutral")
-  product         Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
+model Purchase {
+  id        String   @id @default(uuid())
+  productId String
+  cityName  String
+  stateName String   @default("Uttar Pradesh")
+  createdAt DateTime @default(now())
+  Product   Product  @relation(fields: [productId], references: [id])
 }
 
-model WeatherCache {
-  city         String   @id
-  temperature  Float
-  weather      String
-  last_updated DateTime @default(now())
-}
-
-model FestivalCalendar {
-  id            Int      @id @default(autoincrement())
-  festival_name String
-  state         String
-  start_date    DateTime
-  end_date      DateTime
-  type          String   @default("Normal")
+model CityContext {
+  id             Int      @id @default(autoincrement())
+  cityName       String   @unique
+  climate        String
+  activeFestival String
+  preferredTags  String[]
 }

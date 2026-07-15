@@ -39,6 +39,38 @@ function hashPassword(password) {
 
 app.get('/', (req, res) => res.json({ message: 'Bharat AI Backend running!' }));
 
+const FESTIVALS_2026 = [
+  { name: "Raksha Bandhan", date: "2026-08-12", states: ["All"], tags: ["Festive", "Ethnic", "Kurta", "Saree"] },
+  { name: "Ganesh Chaturthi", date: "2026-09-14", states: ["Maharashtra", "Karnataka", "Telangana"], tags: ["Ethnic", "Festive", "Traditional"] },
+  { name: "Onam", date: "2026-08-25", states: ["Kerala"], tags: ["Saree", "Kasavu", "Ethnic", "Dhoti", "Traditional"] },
+  { name: "Durga Puja", date: "2026-10-17", states: ["West Bengal", "Assam", "Bihar"], tags: ["Saree", "Festive", "Kurta", "Ethnic"] },
+  { name: "Diwali", date: "2026-11-08", states: ["All"], tags: ["Festive", "Ethnic", "Premium", "Saree"] },
+  { name: "Ugadi", date: "2026-03-22", states: ["Andhra Pradesh", "Telangana", "Karnataka"], tags: ["Ethnic", "Traditional", "Silk"] },
+  { name: "Pongal", date: "2026-01-14", states: ["Tamil Nadu"], tags: ["Saree", "Dhoti", "Ethnic", "Traditional"] },
+  { name: "Bihu", date: "2026-04-14", states: ["Assam"], tags: ["Mekhela", "Ethnic", "Traditional"] },
+  { name: "Navratri", date: "2026-10-11", states: ["Gujarat", "Maharashtra", "All"], tags: ["Chaniya Choli", "Garba", "Ethnic", "Festive"] },
+  { name: "Makar Sankranti", date: "2026-01-14", states: ["Gujarat", "Maharashtra", "Rajasthan", "All"], tags: ["Festive", "Ethnic", "Kurta"] }
+];
+
+function getUpcomingFestival(stateName, today = new Date()) {
+  const upcoming = FESTIVALS_2026
+    .filter(f => f.states.includes("All") || f.states.includes(stateName))
+    .map(f => ({ ...f, parsedDate: new Date(f.date) }))
+    .filter(f => f.parsedDate >= today)
+    .sort((a, b) => a.parsedDate.getTime() - b.parsedDate.getTime());
+
+  if (!upcoming.length) return null;
+
+  const daysLeft = Math.ceil((upcoming[0].parsedDate.getTime() - today.getTime()) / 86400000);
+
+  // Show only if within 45 days
+  if (daysLeft <= 45) {
+    return { name: upcoming[0].name, daysLeft, tags: upcoming[0].tags };
+  }
+
+  return null;
+}
+
 app.get('/api/cities', async (req, res) => {
   res.json([]);
 });
@@ -124,14 +156,18 @@ app.get('/api/homepage/shelves', async (req, res) => {
     let temperature = 30;
     try {
       // 1. Geocoding
-      let geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(resolvedCity)}&count=1`);
+      let geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(resolvedCity)}&count=1`, {
+        signal: AbortSignal.timeout(1500)
+      });
       let geoData = await geoRes.json();
       if (geoData.results && geoData.results.length > 0) {
         let lat = geoData.results[0].latitude;
         let lon = geoData.results[0].longitude;
 
         // 2. Weather
-        let weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
+        let weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`, {
+          signal: AbortSignal.timeout(1500)
+        });
         let weatherData = await weatherRes.json();
         if (weatherData.current_weather) {
           temperature = weatherData.current_weather.temperature;
@@ -147,9 +183,10 @@ app.get('/api/homepage/shelves', async (req, res) => {
     // Weather Logic Builder
     let weatherWhere = {
       climate: climate,
-      gender: { contains: targetGender, mode: 'insensitive' }
+      gender: { contains: targetGender, mode: 'insensitive' },
+      img: { not: '-' }
     };
-    
+
     // Explicit overrides for higher relevance based on climate
     if (climate === 'Hot') {
       weatherWhere.OR = [
@@ -182,7 +219,8 @@ app.get('/api/homepage/shelves', async (req, res) => {
     const budgetPicks = await prisma.product.findMany({
       where: {
         price: { lte: budget },
-        gender: { contains: targetGender, mode: 'insensitive' }
+        gender: { contains: targetGender, mode: 'insensitive' },
+        img: { not: '-' }
       },
       orderBy: [
         { rating: 'desc' },
@@ -192,28 +230,134 @@ app.get('/api/homepage/shelves', async (req, res) => {
     });
 
     // Festival Picks logic - nearest upcoming festival
-    const festivalPicks = await prisma.product.findMany({
+    const activeFestival = getUpcomingFestival(resolvedState);
+    let festivalPicks = [];
+
+    if (activeFestival) {
+      const orConditions = [];
+      activeFestival.tags.forEach(tag => {
+        orConditions.push({ occasion: { contains: tag, mode: 'insensitive' } });
+        orConditions.push({ ethnic_style: { contains: tag, mode: 'insensitive' } });
+        orConditions.push({ category: { contains: tag, mode: 'insensitive' } });
+        orConditions.push({ name: { contains: tag, mode: 'insensitive' } });
+      });
+
+      festivalPicks = await prisma.product.findMany({
+        where: {
+          OR: orConditions,
+          gender: { contains: targetGender, mode: 'insensitive' },
+          img: { not: '-' }
+        },
+        orderBy: { rating: 'desc' },
+        take: 15
+      });
+    }
+
+    // Verified Picks (Bayesian logic)
+    const verifiedPicks = await prisma.product.findMany({
       where: {
-        OR: [
-          { occasion: 'Festival' },
-          { occasion: 'Festive' },
-          { ethnic_style: 'Ethnic' }
-        ],
-        gender: { contains: targetGender, mode: 'insensitive' }
+        price: { lte: budget },
+        gender: { contains: targetGender, mode: 'insensitive' },
+        img: { not: '-' }
       },
-      orderBy: { festival_priority: 'desc' },
-      take: 15
+      take: 100
     });
+    
+    const m = 50;
+    const C = 4.0;
+    const scoredVerified = verifiedPicks.map(p => {
+      const v = p.ratingTotal || 0;
+      const R = p.rating || 0;
+      const bayesianScore = ((v / (v + m)) * R) + ((m / (v + m)) * C);
+      return { ...p, bayesianScore };
+    }).sort((a, b) => b.bayesianScore - a.bayesianScore).slice(0, 15);
+
+    // Trending Around You (State-wise purchases)
+    const recentPurchases = await prisma.purchase.findMany({
+      where: {
+        stateName: resolvedState
+      },
+      include: { Product: true },
+      take: 1000
+    });
+
+    const productCounts = {};
+    recentPurchases.forEach(p => {
+      if (p.Product && (!p.Product.gender || p.Product.gender.toLowerCase().includes(targetGender.toLowerCase()))) {
+        productCounts[p.productId] = (productCounts[p.productId] || 0) + 1;
+      }
+    });
+
+    const trendingProductIds = Object.keys(productCounts)
+      .sort((a, b) => productCounts[b] - productCounts[a])
+      .slice(0, 15);
+
+    let trendingPicks = [];
+    if (trendingProductIds.length > 0) {
+      trendingPicks = await prisma.product.findMany({
+        where: { 
+          id: { in: trendingProductIds },
+          img: { not: '-' }
+        }
+      });
+      // Reorder to match trending sort
+      trendingPicks = trendingPicks.sort((a, b) => productCounts[b.id] - productCounts[a.id]);
+    }
+
+    // Build Dynamic Shelves Array
+    const dynamicShelves = [];
+
+    // 1. Weather Shelf
+    if (weatherPicks.length > 0) {
+      dynamicShelves.push({
+        title: `🌡️ ${climate} Climate Comfort`,
+        type: 'weather',
+        products: weatherPicks.map(p => ({ ...p, reason: `✓ Perfect for ${climate.toLowerCase()} weather` }))
+      });
+    }
+
+    // 2. Festival Shelf
+    if (activeFestival && festivalPicks.length > 0) {
+      dynamicShelves.push({
+        title: `✨ ${activeFestival.name} in ${activeFestival.daysLeft} days`,
+        type: 'festival',
+        products: festivalPicks.map(p => ({ ...p, reason: `✓ Trending for ${activeFestival.name}` }))
+      });
+    }
+
+    // 3. Trending Around You
+    if (trendingPicks.length > 0) {
+      dynamicShelves.push({
+        title: `🔥 Trending in ${resolvedState}`,
+        type: 'trending',
+        products: trendingPicks.map(p => ({ ...p, reason: `✓ Bought ${productCounts[p.id]} times in ${resolvedState} recently` }))
+      });
+    }
+
+    // 4. Verified Picks For You
+    if (scoredVerified.length > 0) {
+      dynamicShelves.push({
+        title: `⭐ Verified Picks For You`,
+        type: 'verified',
+        products: scoredVerified.map(p => ({ ...p, reason: `✓ Highly rated by verified buyers` }))
+      });
+    }
+
+    // 5. Under Budget
+    if (budgetPicks.length > 0) {
+      dynamicShelves.push({
+        title: `💰 Under ₹${budget}`,
+        type: 'budget',
+        products: budgetPicks.map(p => ({ ...p, reason: `✓ Under your ₹${budget} budget` }))
+      });
+    }
 
     res.json({
       context: {
-        city: resolvedCity, state: resolvedState, temperature, climate, targetGender, budget
+        city: resolvedCity, state: resolvedState, temperature, climate, targetGender, budget,
+        festival: activeFestival ? { name: activeFestival.name, daysLeft: activeFestival.daysLeft } : null
       },
-      shelves: {
-        weatherPicks,
-        budgetPicks,
-        festivalPicks
-      }
+      dynamicShelves
     });
 
   } catch (error) {
@@ -256,7 +400,7 @@ app.get('/api/seller/analytics', authenticateToken, requireRole('SELLER'), async
   });
   const cityCounts = {};
   purchases.forEach(p => { cityCounts[p.cityName] = (cityCounts[p.cityName] || 0) + 1; });
-  const hotspots = Object.keys(cityCounts).map(city => ({ city, sales: cityCounts[city] })).sort((a,b) => b.sales - a.sales);
+  const hotspots = Object.keys(cityCounts).map(city => ({ city, sales: cityCounts[city] })).sort((a, b) => b.sales - a.sales);
   res.json({ seller, totalSales: purchases.length, hotspots });
 });
 

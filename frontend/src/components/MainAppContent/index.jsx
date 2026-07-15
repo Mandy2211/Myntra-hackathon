@@ -6,7 +6,7 @@ import DynamicShelf from '../DynamicShelf';
 
 export default function MainAppContent() {
   const { user, logout, updateCity } = useAuth();
-  
+
   const [cities, setCities] = useState([]);
   const [loading, setLoading] = useState(false);
   const [customCityMode, setCustomCityMode] = useState(false);
@@ -44,7 +44,7 @@ export default function MainAppContent() {
         setIsSearching(false);
       }
     }, 600);
-    
+
     return () => clearTimeout(delayDebounceFn);
   }, [customCityInput]);
 
@@ -66,7 +66,7 @@ export default function MainAppContent() {
         if (res.ok) {
           const data = await res.json();
           setShelves(data);
-          setBudgetPicks(data.shelves.budgetPicks);
+          // Just use the first dynamic shelf as budgetPicks fallback if needed, or don't set it since we use dynamic shelves now
         }
       } catch (e) {
         console.error(e);
@@ -74,9 +74,9 @@ export default function MainAppContent() {
         setLoadingShelves(false);
       }
     };
-    
+
     fetchShelves();
-  // We intentionally bypass 'budget' dependency here to prevent deep re-renders!
+    // We intentionally bypass 'budget' dependency here to prevent deep re-renders!
   }, [user?.city, user?.state, user?.gender]);
 
   // Budget Slider Effect
@@ -104,7 +104,7 @@ export default function MainAppContent() {
         setLoadingBudget(false);
       }
     };
-    
+
     const debounce = setTimeout(fetchBudgetPicks, 500);
     return () => clearTimeout(debounce);
   }, [budget, user?.gender]);
@@ -124,10 +124,10 @@ export default function MainAppContent() {
               lon: position.coords.longitude,
               addressInfo: data.address
             };
-            
+
             updateCity(detectCity, exactLocation);
             setCustomCityMode(false);
-          } catch(err) {
+          } catch (err) {
             console.error(err);
             alert("Location detection failed");
           } finally {
@@ -169,7 +169,7 @@ export default function MainAppContent() {
           <div className="flex flex-col sm:flex-row items-center gap-2">
             <div className="flex items-center gap-2 bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700">
               <MapPin className="text-pink-500 w-4 h-4" />
-              
+
               {customCityMode ? (
                 <div className="relative">
                   <form onSubmit={(e) => e.preventDefault()} className="flex items-center gap-2">
@@ -181,7 +181,7 @@ export default function MainAppContent() {
                       className="bg-transparent text-sm focus:outline-none text-slate-200 w-36 border-b border-pink-500/50 focus:border-pink-500 pb-0.5"
                       autoFocus
                     />
-                    <button type="button" onClick={() => {setCustomCityMode(false); setCustomCityInput(''); setSuggestions([]);}} className="text-xs text-slate-400 hover:text-white transition">Cancel</button>
+                    <button type="button" onClick={() => { setCustomCityMode(false); setCustomCityInput(''); setSuggestions([]); }} className="text-xs text-slate-400 hover:text-white transition">Cancel</button>
                     {isSearching && <div className="w-3 h-3 border border-pink-500 border-t-transparent rounded-full animate-spin"></div>}
                   </form>
                   {suggestions.length > 0 && (
@@ -189,25 +189,26 @@ export default function MainAppContent() {
                       {suggestions.map((loc) => {
                         const cityName = loc.address?.city || loc.address?.town || loc.address?.state_district || loc.name;
                         return (
-                          <div 
-                            key={loc.place_id} 
+                          <div
+                            key={loc.place_id}
                             onClick={() => {
-                               updateCity(cityName, {
-                                 displayName: loc.display_name,
-                                 lat: loc.lat,
-                                 lon: loc.lon,
-                                 addressInfo: loc.address
-                               });
-                               setCustomCityMode(false);
-                               setCustomCityInput('');
-                               setSuggestions([]);
+                              updateCity(cityName, {
+                                displayName: loc.display_name,
+                                lat: loc.lat,
+                                lon: loc.lon,
+                                addressInfo: loc.address
+                              });
+                              setCustomCityMode(false);
+                              setCustomCityInput('');
+                              setSuggestions([]);
                             }}
                             className="p-2 cursor-pointer hover:bg-slate-700 border-b border-slate-700/50 text-slate-200 flex flex-col justify-center"
                           >
                             <span className="font-bold text-pink-400 capitalize">{cityName}</span>
                             <span className="text-[10px] text-slate-400 truncate">{loc.display_name}</span>
                           </div>
-                      )})}
+                        )
+                      })}
                     </div>
                   )}
                 </div>
@@ -223,7 +224,7 @@ export default function MainAppContent() {
                       </span>
                     )}
                   </div>
-                  <select 
+                  <select
                     value=""
                     onChange={(e) => {
                       if (e.target.value === 'custom') {
@@ -246,9 +247,9 @@ export default function MainAppContent() {
                 </div>
               )}
             </div>
-            
+
             {!customCityMode && (
-              <button 
+              <button
                 onClick={handleAutoDetect}
                 className="text-xs bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-1.5 rounded-lg text-emerald-400 flex items-center gap-1.5 transition"
                 title="Auto-detect location from GPS"
@@ -268,7 +269,7 @@ export default function MainAppContent() {
                 <span className="text-[10px] text-purple-300 font-medium uppercase tracking-wider">{user?.role}</span>
               </div>
             </div>
-            <button 
+            <button
               onClick={logout}
               className="p-2 bg-slate-800 hover:bg-rose-950/40 hover:text-rose-450 border border-slate-700 hover:border-rose-900/50 rounded-lg transition"
               title="Logout"
@@ -280,7 +281,7 @@ export default function MainAppContent() {
       </header>
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-8 py-8 flex flex-col gap-6">
-        
+
         {/* Context bar / Controls */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-xl">
           <div className="flex items-center gap-4">
@@ -309,47 +310,49 @@ export default function MainAppContent() {
         ) : shelves ? (
           <div className="space-y-12">
             
-            {/* Festival Picks */}
-            <Shelf title="✨ Festival Ready" products={shelves.shelves.festivalPicks} />
-            
-            {/* Weather Picks */}
-            <Shelf title={`🌡️ ${shelves.context.climate} Climate Comfort`} products={shelves.shelves.weatherPicks} />
+            {shelves.dynamicShelves?.map((shelf, idx) => (
+              <Shelf 
+                key={idx}
+                title={shelf.title}
+                products={shelf.products}
+              />
+            ))}
             
             {/* Budget Picks Area */}
             <div>
               <div className="w-full max-w-md mb-6 bg-slate-900 p-4 rounded-xl border border-slate-800 relative overflow-hidden">
                 {loadingBudget && (
                   <div className="absolute top-0 right-0 p-2">
-                     <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent flex items-center justify-center rounded-full animate-spin"></div>
+                    <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent flex items-center justify-center rounded-full animate-spin"></div>
                   </div>
                 )}
                 <div className="flex justify-between items-end mb-2">
                   <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">Adjust Max Budget Priority</label>
                   <span className={`text-lg font-bold transition-colors ${loadingBudget ? 'text-slate-500' : 'text-emerald-400'}`}>₹{budget}</span>
                 </div>
-                <input 
-                  type="range" 
-                  min="200" 
-                  max="10000" 
+                <input
+                  type="range"
+                  min="200"
+                  max="10000"
                   step="100"
-                  value={budget} 
+                  value={budget}
                   onChange={(e) => setBudget(e.target.value)}
                   className="w-full accent-emerald-500 h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer"
                 />
               </div>
-              
+
               <div className={`transition-opacity duration-300 ${loadingBudget ? 'opacity-30' : 'opacity-100'}`}>
                 <Shelf title="💎 Top Rated under Budget" products={budgetPicks} />
               </div>
             </div>
-            
+
           </div>
         ) : (
           <div className="flex-1 flex items-center justify-center text-slate-500">
             Select a location to view personalized shelves.
           </div>
         )}
-        
+
       </main>
     </div>
   );
@@ -357,11 +360,11 @@ export default function MainAppContent() {
 
 const Shelf = ({ title, products }) => {
   if (!products || products.length === 0) return null;
-  
+
   return (
     <div className="w-full">
       <h3 className="text-2xl font-extrabold text-slate-100 mb-6 flex items-center gap-2">
-        {title} 
+        {title}
         <span className="text-xs font-medium bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full ml-2 border border-slate-700">
           {products.length} items
         </span>
@@ -370,15 +373,29 @@ const Shelf = ({ title, products }) => {
         {products.map(p => (
           <div key={p.id} className="snap-start shrink-0 w-[220px] bg-slate-900 border border-slate-800 rounded-xl overflow-hidden hover:border-pink-500/50 hover:shadow-lg hover:shadow-pink-900/10 transition-all duration-300 group">
             <div className="relative h-[280px] overflow-hidden bg-slate-950">
-              <img src={p.img?.split(';')[0]} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"/>
+              <img 
+                src={p.img?.split(';')[0]} 
+                alt={p.name} 
+                onError={(e) => { 
+                  if (e.target.src !== '/fallback.png') {
+                    e.target.src = '/fallback.png';
+                  }
+                }}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              />
               {p.discount && p.discount !== '0' && p.discount !== '' && (
                 <div className="absolute top-2 left-2 bg-rose-500 text-white text-[10px] font-bold px-2 py-1 rounded shadow-lg">
-                  {p.discount} OFF
+                  {p.discount.includes('%') ? p.discount : p.discount + '%'} OFF
                 </div>
               )}
             </div>
-            <div className="p-4">
-              <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400 mb-1">{p.seller || p.brand}</div>
+            <div className="p-4 relative min-h-[140px] flex flex-col">
+              {p.reason && (
+                <div className="text-[10px] font-medium text-emerald-400 bg-emerald-950/30 border border-emerald-900/50 px-2 py-1 rounded-md mb-2 leading-tight">
+                  {p.reason}
+                </div>
+              )}
+              <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400 mb-1">{p.seller || p.brand || p.brand_name || 'Brand'}</div>
               <h4 className="font-medium text-sm text-slate-200 line-clamp-2 mb-3 h-10" title={p.name}>{p.name}</h4>
               <div className="flex justify-between items-center mt-auto">
                 <div>

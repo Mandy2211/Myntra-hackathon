@@ -10,6 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "country-state-city": "^3.2.1",
+    "fast-levenshtein": "^3.0.0",
     "lucide-react": "^0.454.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",

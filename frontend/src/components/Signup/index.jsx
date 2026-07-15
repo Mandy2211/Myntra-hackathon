@@ -2,18 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { ShoppingBag, Sparkles, DollarSign, TrendingUp, Shield, Lock, User as UserIcon, Smartphone } from 'lucide-react';
-
-const LOCATION_DATA = {
-  "Tamil Nadu": ["Chennai", "Coimbatore", "Madurai", "Trichy", "Salem"],
-  "Maharashtra": ["Mumbai", "Pune", "Nagpur", "Nashik", "Aurangabad"],
-  "Karnataka": ["Bengaluru", "Mysuru", "Hubballi", "Mangaluru", "Belagavi"],
-  "Delhi": ["New Delhi"],
-  "Bihar": ["Patna", "Gaya", "Bhagalpur", "Muzaffarpur"],
-  "Andhra Pradesh": ["Visakhapatnam", "Vijayawada", "Guntur", "Nellore"],
-  "Gujarat": ["Ahmedabad", "Surat", "Vadodara", "Rajkot"],
-  "West Bengal": ["Kolkata", "Howrah", "Durgapur", "Asansol"],
-  "Uttar Pradesh": ["Lucknow", "Kanpur", "Varanasi", "Agra", "Noida"]
-};
+import { State, City } from 'country-state-city';
+import levenshtein from 'fast-levenshtein';
+import SearchableSelect from './SearchableSelect';
 
 export default function Signup() {
   const { register, error, setError } = useAuth();
@@ -26,15 +17,42 @@ export default function Signup() {
   const [gender, setGender] = useState('');
   const [state, setStateName] = useState('');
   const [city, setCityName] = useState('');
+  const [customTown, setCustomTown] = useState('');
+  const [suggestedTown, setSuggestedTown] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const states = State.getStatesOfCountry('IN').map(s => ({ value: s.isoCode, label: s.name }));
+  const cities = state ? City.getCitiesOfState('IN', state).map(c => ({ value: c.name, label: c.name })) : [];
+
   useEffect(() => {
-    if (state && LOCATION_DATA[state]) {
-      if (!LOCATION_DATA[state].includes(city)) {
-        setCityName('');
-      }
-    }
+    // Reset city if state changes
+    setCityName('');
+    setCustomTown('');
+    setSuggestedTown('');
   }, [state]);
+
+  useEffect(() => {
+    if (city === 'OTHERS' && customTown.length > 2) {
+      // Find closest city
+      let closest = '';
+      let minDistance = Infinity;
+      cities.forEach(c => {
+        const distance = levenshtein.get(customTown.toLowerCase(), c.label.toLowerCase());
+        if (distance < minDistance) {
+          minDistance = distance;
+          closest = c.label;
+        }
+      });
+      // Suggest if it's somewhat close and not exactly the same
+      if (closest && minDistance > 0 && minDistance < 5) {
+        setSuggestedTown(closest);
+      } else {
+        setSuggestedTown('');
+      }
+    } else {
+      setSuggestedTown('');
+    }
+  }, [customTown, city, cities]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -59,7 +77,10 @@ export default function Signup() {
 
     setLoading(true);
     try {
-      await register(email, password, role, name, city, state, gender);
+      // Get the full state name for the backend
+      const fullStateName = states.find(s => s.value === state)?.label || state;
+      const finalCity = city === 'OTHERS' ? customTown : city;
+      await register(email, password, role, name, finalCity, fullStateName, gender);
       navigate('/login');
     } catch (err) {
       console.error(err);
@@ -248,36 +269,56 @@ export default function Signup() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-[10px] text-slate-405 font-bold uppercase tracking-widest">Active State</label>
-                    <select 
+                    <SearchableSelect 
+                      options={states}
                       value={state}
-                      onChange={(e) => setStateName(e.target.value)}
-                      className="w-full bg-slate-950 text-slate-100 border border-slate-700/60 focus:border-pink-500 rounded-xl py-2.5 px-3 text-xs focus:outline-none transition-all duration-200 focus:ring-1 focus:ring-pink-555"
-                      required
-                    >
-                      <option value="" disabled className="bg-slate-900 text-slate-400">Select state</option>
-                      {Object.keys(LOCATION_DATA).map(st => (
-                        <option key={st} value={st} className="bg-slate-900 text-slate-100">{st}</option>
-                      ))}
-                    </select>
+                      onChange={setStateName}
+                      placeholder="Select state"
+                    />
                   </div>
 
                   <div className="space-y-1.5">
                     <label className="text-[10px] text-slate-405 font-bold uppercase tracking-widest">Active City</label>
-                    <select 
+                    <SearchableSelect 
+                      options={cities}
                       value={city}
-                      onChange={(e) => setCityName(e.target.value)}
-                      className="w-full bg-slate-950 text-slate-100 border border-slate-700/60 focus:border-pink-500 rounded-xl py-2.5 px-3 text-xs focus:outline-none transition-all duration-200 focus:ring-1 focus:ring-pink-555 disabled:opacity-50"
+                      onChange={setCityName}
+                      placeholder="Select city"
                       disabled={!state}
-                      required
-                    >
-                      <option value="" disabled className="bg-slate-900 text-slate-400">Select city</option>
-                      {state && LOCATION_DATA[state]?.map(c => (
-                        <option key={c} value={c} className="bg-slate-900 text-slate-100">{c}</option>
-                      ))}
-                    </select>
+                      allowOthers={true}
+                    />
                   </div>
                 </div>
 
+                {city === 'OTHERS' && (
+                  <div className="space-y-1.5 bg-slate-900/80 p-3 rounded-xl border border-slate-800">
+                    <label className="text-[10px] text-pink-400 font-bold uppercase tracking-widest">Enter your town</label>
+                    <input 
+                      type="text" 
+                      placeholder="Type your town name"
+                      className="w-full bg-slate-950 text-slate-100 border border-slate-700/60 focus:border-pink-500 rounded-lg py-2 px-3 text-xs focus:outline-none transition-all duration-200"
+                      value={customTown}
+                      onChange={(e) => setCustomTown(e.target.value)}
+                      required
+                    />
+                    {suggestedTown && (
+                      <div className="mt-2 text-xs text-slate-400 flex items-center justify-between">
+                        <span>Did you mean <strong className="text-pink-400">{suggestedTown}</strong>?</span>
+                        <button 
+                          type="button"
+                          onClick={() => {
+                            setCityName(suggestedTown);
+                            setCustomTown('');
+                            setSuggestedTown('');
+                          }}
+                          className="bg-slate-800 hover:bg-slate-700 text-slate-200 px-2 py-1 rounded text-[10px] transition-colors"
+                        >
+                          Yes, select this
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               <button 
