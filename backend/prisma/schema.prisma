@@ -12,28 +12,40 @@ datasource db {
 
 model User {
   id           String   @id @default(uuid())
-  phone        String   @unique
+  email        String   @unique
   passwordHash String
   role         String   @default("CUSTOMER") // CUSTOMER or SELLER
+  gender       String   @default("Men")
   city         String   @default("Coimbatore")
+  state        String   @default("Tamil Nadu")
   name         String?
   createdAt    DateTime @default(now())
 }
 
 model Product {
-  id          String     @id
-  name        String
-  img         String     // Semicolon-separated image URLs
-  asin        String?
-  price       Float
-  mrp         Float
-  rating      Float
-  ratingTotal Int
-  discount    String
-  seller      String
-  purl        String
-  category    String     // Catalog category (e.g. Ethnic, Casual, Sportswear)
-  tags        String[]   // Array of tags (e.g. ['cotton', 'silk', 'festive'])
+  id                String   @id
+  name              String
+  img               String
+  asin              String?
+  price             Float
+  mrp               Float
+  rating            Float
+  ratingTotal       Int
+  discount          String?
+  seller            String?
+  purl              String?
+  gender            String?
+  category          String?
+  macro_category    String?
+  material          String?
+  occasion          String?
+  season            String?
+  climate           String?
+  ethnic_style      String?
+  price_segment     String?
+  weather_priority  Int?
+  festival_priority Int?
+  confidence        Float?
   purchases   Purchase[]
 }
 

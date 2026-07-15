@@ -41,14 +41,14 @@ export const AuthProvider = ({ children }) => {
     fetchProfile();
   }, [token]);
 
-  const login = async (phone, password) => {
+  const login = async (email, password) => {
     setError('');
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, password })
+        body: JSON.stringify({ email, password })
       });
 
       const data = await res.json();
@@ -69,14 +69,14 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const register = async (phone, password, role, name, city) => {
+  const register = async (email, password, role, name, city, state, gender) => {
     setError('');
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, password, role, name, city })
+        body: JSON.stringify({ email, password, role, name, city, state, gender })
       });
 
       const data = await res.json();
@@ -105,14 +105,14 @@ export const AuthProvider = ({ children }) => {
     if (!user) return;
     try {
       // Opt-in sync with backend profile database record
-      setUser(prev => ({ ...prev, city: cityName, exactLocation }));
+      setUser(prev => ({ ...prev, city: cityName, state: exactLocation?.addressInfo?.state || prev.state }));
       await fetch(`${API_BASE}/auth/login`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}` 
         },
-        body: JSON.stringify({ phone: user.phone, city: cityName })
+        body: JSON.stringify({ email: user.email, city: cityName, state: exactLocation })
       });
     } catch (err) {
       console.error('Failed to sync updated location to server:', err);

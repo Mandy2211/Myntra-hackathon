@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { ShoppingBag, MapPin, User as UserIcon, LogOut } from 'lucide-react';
+import { ShoppingBag, MapPin, User as UserIcon, LogOut, Sun, CloudRain, ThermometerSnowflake } from 'lucide-react';
 import { fetchCities } from '../../services/api';
 
 export default function MainAppContent() {
@@ -13,14 +13,18 @@ export default function MainAppContent() {
   const [suggestions, setSuggestions] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
 
-  // Fetch Cities list for dropdown
+  const [shelves, setShelves] = useState(null);
+  const [budgetPicks, setBudgetPicks] = useState(null);
+  const [budget, setBudget] = useState(2000);
+  const [loadingShelves, setLoadingShelves] = useState(false);
+  const [loadingBudget, setLoadingBudget] = useState(false);
+
   useEffect(() => {
     fetchCities()
       .then(data => setCities(data))
       .catch(err => console.error('Error fetching cities:', err));
   }, []);
 
-  // Autocomplete fetcher for custom location using OpenStreetMap Nominatim
   useEffect(() => {
     if (customCityInput.trim().length < 3) {
       setSuggestions([]);
@@ -30,7 +34,6 @@ export default function MainAppContent() {
       setIsSearching(true);
       try {
         const query = encodeURIComponent(customCityInput.trim());
-        // countrycodes=in constraints search to India only
         const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${query}&countrycodes=in&format=json&addressdetails=1&limit=5`);
         const data = await res.json();
         setSuggestions(data);
@@ -39,10 +42,71 @@ export default function MainAppContent() {
       } finally {
         setIsSearching(false);
       }
-    }, 600); // 600ms debounce
+    }, 600);
     
     return () => clearTimeout(delayDebounceFn);
   }, [customCityInput]);
+
+  // Main Shelves Effect (Fires on Context Change - weather, festival)
+  useEffect(() => {
+    const fetchShelves = async () => {
+      setLoadingShelves(true);
+      try {
+        const token = localStorage.getItem('token');
+        const query = new URLSearchParams({
+          city: user?.city || 'Coimbatore',
+          state: user?.state || 'Tamil Nadu',
+          gender: user?.gender || 'Men',
+          maxPrice: budget // Send current budget so initial structure syncs
+        });
+        const res = await fetch(`http://localhost:5000/api/homepage/shelves?${query}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setShelves(data);
+          setBudgetPicks(data.shelves.budgetPicks);
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoadingShelves(false);
+      }
+    };
+    
+    fetchShelves();
+  // We intentionally bypass 'budget' dependency here to prevent deep re-renders!
+  }, [user?.city, user?.state, user?.gender]);
+
+  // Budget Slider Effect
+  useEffect(() => {
+    if (!shelves) return; // Wait for initial context load first
+
+    const fetchBudgetPicks = async () => {
+      setLoadingBudget(true);
+      try {
+        const token = localStorage.getItem('token');
+        const query = new URLSearchParams({
+          gender: user?.gender || 'Men',
+          maxPrice: budget
+        });
+        const res = await fetch(`http://localhost:5000/api/homepage/budget-picks?${query}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setBudgetPicks(data.budgetPicks);
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoadingBudget(false);
+      }
+    };
+    
+    const debounce = setTimeout(fetchBudgetPicks, 500);
+    return () => clearTimeout(debounce);
+  }, [budget, user?.gender]);
 
   const handleAutoDetect = () => {
     if ("geolocation" in navigator) {
@@ -53,8 +117,6 @@ export default function MainAppContent() {
             const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${position.coords.latitude}&lon=${position.coords.longitude}`);
             const data = await res.json();
             const detectCity = data.address.city || data.address.town || data.address.state_district || "Unknown";
-            
-            // Save precise details (display name, lat/lon, full address object) for future dashboards
             const exactLocation = {
               displayName: data.display_name,
               lat: position.coords.latitude,
@@ -63,8 +125,6 @@ export default function MainAppContent() {
             };
             
             updateCity(detectCity, exactLocation);
-            
-            // Revert back from custom mode if used
             setCustomCityMode(false);
           } catch(err) {
             console.error(err);
@@ -84,9 +144,14 @@ export default function MainAppContent() {
     }
   };
 
+  const getClimateIcon = (climate) => {
+    if (climate === 'Hot') return <Sun className="w-5 h-5 text-yellow-500" />;
+    if (climate === 'Cold') return <ThermometerSnowflake className="w-5 h-5 text-cyan-400" />;
+    return <CloudRain className="w-5 h-5 text-blue-400" />;
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
-      {/* Header Bar */}
       <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-50 px-4 py-3 sm:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-pink-600 rounded-lg text-white">
@@ -100,7 +165,6 @@ export default function MainAppContent() {
         </div>
 
         <div className="flex flex-wrap items-center gap-4">
-          {/* Location Selection & Auto Detect */}
           <div className="flex flex-col sm:flex-row items-center gap-2">
             <div className="flex items-center gap-2 bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700">
               <MapPin className="text-pink-500 w-4 h-4" />
@@ -214,10 +278,120 @@ export default function MainAppContent() {
         </div>
       </header>
 
-      {/* Main Content Area */}
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-8 py-12 flex flex-col items-center justify-center">
-        <h2 className="text-4xl font-bold text-slate-100 tracking-tight">dashboard</h2>
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-8 py-8 flex flex-col gap-6">
+        
+        {/* Context bar / Controls */}
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-xl">
+          <div className="flex items-center gap-4">
+            {shelves?.context && (
+              <div className="bg-slate-950 px-4 py-2 rounded-xl flex items-center gap-3 border border-slate-800">
+                {getClimateIcon(shelves.context.climate)}
+                <div>
+                  <div className="text-xs text-slate-400 font-bold uppercase tracking-wider">Current Forecast</div>
+                  <div className="font-medium text-slate-200">
+                    <span className="font-bold text-white">{shelves.context.temperature}°C</span>, {shelves.context.climate}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Loading overlay for shelves */}
+        {loadingShelves ? (
+          <div className="flex-1 flex flex-col items-center justify-center p-20">
+            <div className="w-12 h-12 border-4 border-pink-500 border-t-transparent flex items-center justify-center rounded-full animate-spin">
+              <div className="w-6 h-6 border-4 border-purple-500 border-b-transparent rounded-full animate-spin-reverse opacity-70"></div>
+            </div>
+            <p className="mt-4 text-sm text-slate-400 font-medium">Building contextual shelves for {user?.city}...</p>
+          </div>
+        ) : shelves ? (
+          <div className="space-y-12">
+            
+            {/* Festival Picks */}
+            <Shelf title="✨ Festival Ready" products={shelves.shelves.festivalPicks} />
+            
+            {/* Weather Picks */}
+            <Shelf title={`🌡️ ${shelves.context.climate} Climate Comfort`} products={shelves.shelves.weatherPicks} />
+            
+            {/* Budget Picks Area */}
+            <div>
+              <div className="w-full max-w-md mb-6 bg-slate-900 p-4 rounded-xl border border-slate-800 relative overflow-hidden">
+                {loadingBudget && (
+                  <div className="absolute top-0 right-0 p-2">
+                     <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent flex items-center justify-center rounded-full animate-spin"></div>
+                  </div>
+                )}
+                <div className="flex justify-between items-end mb-2">
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">Adjust Max Budget Priority</label>
+                  <span className={`text-lg font-bold transition-colors ${loadingBudget ? 'text-slate-500' : 'text-emerald-400'}`}>₹{budget}</span>
+                </div>
+                <input 
+                  type="range" 
+                  min="200" 
+                  max="10000" 
+                  step="100"
+                  value={budget} 
+                  onChange={(e) => setBudget(e.target.value)}
+                  className="w-full accent-emerald-500 h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer"
+                />
+              </div>
+              
+              <div className={`transition-opacity duration-300 ${loadingBudget ? 'opacity-30' : 'opacity-100'}`}>
+                <Shelf title="💎 Top Rated under Budget" products={budgetPicks} />
+              </div>
+            </div>
+            
+          </div>
+        ) : (
+          <div className="flex-1 flex items-center justify-center text-slate-500">
+            Select a location to view personalized shelves.
+          </div>
+        )}
+        
       </main>
     </div>
   );
+}
+
+const Shelf = ({ title, products }) => {
+  if (!products || products.length === 0) return null;
+  
+  return (
+    <div className="w-full">
+      <h3 className="text-2xl font-extrabold text-slate-100 mb-6 flex items-center gap-2">
+        {title} 
+        <span className="text-xs font-medium bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full ml-2 border border-slate-700">
+          {products.length} items
+        </span>
+      </h3>
+      <div className="flex overflow-x-auto gap-4 pb-4 snap-x hide-scroll">
+        {products.map(p => (
+          <div key={p.id} className="snap-start shrink-0 w-[220px] bg-slate-900 border border-slate-800 rounded-xl overflow-hidden hover:border-pink-500/50 hover:shadow-lg hover:shadow-pink-900/10 transition-all duration-300 group">
+            <div className="relative h-[280px] overflow-hidden bg-slate-950">
+              <img src={p.img?.split(';')[0]} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"/>
+              {p.discount && p.discount !== '0' && p.discount !== '' && (
+                <div className="absolute top-2 left-2 bg-rose-500 text-white text-[10px] font-bold px-2 py-1 rounded shadow-lg">
+                  {p.discount} OFF
+                </div>
+              )}
+            </div>
+            <div className="p-4">
+              <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400 mb-1">{p.seller || p.brand}</div>
+              <h4 className="font-medium text-sm text-slate-200 line-clamp-2 mb-3 h-10" title={p.name}>{p.name}</h4>
+              <div className="flex justify-between items-center mt-auto">
+                <div>
+                  <span className="font-bold text-lg text-emerald-400">₹{p.price}</span>
+                  {p.mrp > p.price && <span className="text-xs text-slate-500 line-through ml-2">₹{p.mrp}</span>}
+                </div>
+                <div className="flex items-center gap-1 bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">
+                  <span className="text-[10px] font-bold text-amber-400">⭐ {p.rating}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
 }
