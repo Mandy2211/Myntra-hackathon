@@ -40,7 +40,7 @@ export default function SearchResults() {
               const val = e.target.search.value;
               if(!val.trim()) return;
               
-              const token = localStorage.getItem('token');
+              const token = sessionStorage.getItem('token');
               fetch('http://localhost:5000/api/search/track', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },

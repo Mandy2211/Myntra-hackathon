@@ -56,7 +56,7 @@ export default function MainAppContent() {
     const fetchShelves = async () => {
       setLoadingShelves(true);
       try {
-        const token = localStorage.getItem('token');
+        const token = sessionStorage.getItem('token');
         const query = new URLSearchParams({
           city: user?.city || 'Coimbatore',
           state: user?.state || 'Tamil Nadu',
@@ -89,7 +89,7 @@ export default function MainAppContent() {
     const fetchBudgetPicks = async () => {
       setLoadingBudget(true);
       try {
-        const token = localStorage.getItem('token');
+        const token = sessionStorage.getItem('token');
         const query = new URLSearchParams({
           gender: user?.gender || 'Men',
           maxPrice: budget
@@ -174,7 +174,7 @@ export default function MainAppContent() {
               e.preventDefault();
               if(!searchQuery.trim()) return;
               try {
-                const token = localStorage.getItem('token');
+                const token = sessionStorage.getItem('token');
                 // The API track call happens silently in the background
                 fetch('http://localhost:5000/api/search/track', {
                   method: 'POST',

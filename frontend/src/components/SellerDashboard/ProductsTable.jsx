@@ -18,7 +18,7 @@ export default function ProductsTable({ refreshTrigger }) {
       });
       if (res.ok) {
         const data = await res.json();
-        setProducts(data);
+        setProducts(data.products || data || []);
       }
     } catch (err) {
       console.error(err);

@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { TrendingUp, AlertTriangle, CheckCircle, Search, Activity, Package, Plus, LayoutDashboard } from 'lucide-react';
+import { TrendingUp, AlertTriangle, CheckCircle, Search, Activity, Package, Plus, LayoutDashboard, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import UploadForm from './UploadForm';
 import ProductsTable from './ProductsTable';
 
 export default function SellerDashboard() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
@@ -24,7 +24,7 @@ export default function SellerDashboard() {
   useEffect(() => {
     const fetchDashboard = async () => {
       try {
-        const token = localStorage.getItem('token');
+        const token = sessionStorage.getItem('token');
         const res = await fetch('http://localhost:5000/api/seller/dashboard', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -91,8 +91,18 @@ export default function SellerDashboard() {
             </button>
           </nav>
           
-          <button onClick={() => navigate('/')} className="block w-full text-center text-xs font-medium text-pink-400 hover:text-pink-300 mt-12 py-4 border-t border-slate-800">
+          <button onClick={() => navigate('/')} className="block w-full text-center text-xs font-medium text-pink-400 hover:text-pink-300 mt-12 pt-4 pb-2 border-t border-slate-800">
             ← Back to Consumer Store
+          </button>
+          
+          <button 
+            onClick={() => {
+              logout();
+              navigate('/login');
+            }}
+            className="flex items-center justify-center gap-2 w-full text-center text-xs font-medium text-rose-500 hover:text-rose-400 py-2 transition-colors mb-4"
+          >
+            <LogOut className="w-4 h-4" /> Secure Logout
           </button>
         </aside>
 

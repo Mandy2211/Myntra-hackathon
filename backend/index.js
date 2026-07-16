@@ -518,8 +518,8 @@ app.post('/api/seller/products', authenticateToken, requireRole('SELLER'), uploa
         mrp: parseFloat(mrp) || 0,
         img: imagePaths, // Saving Cloudinary block directly into legacy visual stream
         asin: req.user.businessName, 
-        rating: 4.8, 
-        ratingTotal: 5,
+        rating: 0, 
+        ratingTotal: 0,
         gender,
         category,
         material,
