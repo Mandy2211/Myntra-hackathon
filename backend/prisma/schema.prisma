@@ -15,9 +15,18 @@ model User {
   city         String   @default("Coimbatore")
   state        String   @default("Tamil Nadu")
   name         String?
-  createdAt    DateTime @default(now())
-  gender       String   @default("Men")
+  createdAt       DateTime @default(now())
+  gender          String   @default("Men")
+  mobileNumber    String?
+  businessType    String?
+  businessName    String?
+  gstNumber       String?
+  yearsInBusiness Int?
+  primaryProduct  String?
+  pincode         String?
+  Products        Product[]
 }
+
 
 model Product {
   id                String     @id
@@ -43,7 +52,31 @@ model Product {
   weather_priority  Int?
   festival_priority Int?
   confidence        Float?
+  
+  sellerId          String?
+  city              String?
+  state             String?
+  status            String  @default("Active")
+  remainingStock    Int     @default(0)
+  source            String  @default("imported")
+  
+  Seller            User?   @relation(fields: [sellerId], references: [id])
   Purchase          Purchase[]
+}
+
+model SearchQuery {
+  id        String   @id @default(uuid())
+  rawQuery  String
+  category  String   @default("NA")
+  type      String   @default("NA")
+  colour    String   @default("NA")
+  material  String   @default("NA")
+  gender    String   @default("NA")
+  occasion  String   @default("NA")
+  budget    String   @default("NA")
+  city      String
+  state     String
+  createdAt DateTime @default(now())
 }
 
 model Purchase {

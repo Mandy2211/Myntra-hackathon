@@ -5,6 +5,27 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const multer = require('multer');
+const { v2: cloudinary } = require('cloudinary');
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const enrichment = require('./services/enrichment');
+const llmEnrichment = require('./services/llm-enrichment');
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'bharat_ai_products',
+    allowed_formats: ['jpg', 'jpeg', 'png', 'webp']
+  }
+});
+const upload = multer({ storage: storage });
+
 const PORT = process.env.PORT || 5000;
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-here-123';
 
@@ -205,11 +226,37 @@ app.get('/api/homepage/shelves', async (req, res) => {
       ];
     }
 
-    // Weather Picks
+    // Weather Picks (Prioritize Local City)
     const weatherPicks = await prisma.product.findMany({
-      where: weatherWhere,
+      where: { ...weatherWhere, city: { equals: resolvedCity, mode: 'insensitive' } },
       orderBy: [
         { weather_priority: 'desc' },
+        { rating: 'desc' }
+      ],
+      take: 15
+    });
+    
+    // If we didn't find enough local weather items, fallback to national
+    if (weatherPicks.length < 5) {
+        const nationalWeather = await prisma.product.findMany({
+          where: weatherWhere,
+          orderBy: [
+            { weather_priority: 'desc' },
+            { rating: 'desc' }
+          ],
+          take: 15
+        });
+        weatherPicks.push(...nationalWeather.filter(nw => !weatherPicks.find(wp => wp.id === nw.id)));
+    }
+
+    // Dedicated Local Shelf
+    const localPicks = await prisma.product.findMany({
+      where: {
+        city: { equals: resolvedCity, mode: 'insensitive' },
+        gender: { contains: targetGender, mode: 'insensitive' },
+        img: { not: '-' }
+      },
+      orderBy: [
         { rating: 'desc' }
       ],
       take: 15
@@ -307,6 +354,15 @@ app.get('/api/homepage/shelves', async (req, res) => {
     // Build Dynamic Shelves Array
     const dynamicShelves = [];
 
+    // 0. Local Storefronts
+    if (localPicks.length > 0) {
+      dynamicShelves.push({
+        title: `🏪 Local Boutiques in ${resolvedCity}`,
+        type: 'local',
+        products: localPicks.map(p => ({ ...p, reason: `✓ Ships locally from ${resolvedCity}` }))
+      });
+    }
+
     // 1. Weather Shelf
     if (weatherPicks.length > 0) {
       dynamicShelves.push({
@@ -402,6 +458,106 @@ app.get('/api/seller/analytics', authenticateToken, requireRole('SELLER'), async
   purchases.forEach(p => { cityCounts[p.cityName] = (cityCounts[p.cityName] || 0) + 1; });
   const hotspots = Object.keys(cityCounts).map(city => ({ city, sales: cityCounts[city] })).sort((a, b) => b.sales - a.sales);
   res.json({ seller, totalSales: purchases.length, hotspots });
+});
+
+app.get('/api/seller/products', authenticateToken, requireRole('SELLER'), async (req, res) => {
+  try {
+    const products = await prisma.product.findMany({
+      where: { sellerId: req.user.id },
+      orderBy: { id: 'desc' }
+    });
+    // Transform img -> images string array for the frontend Seller Dashboard requirement to remain seamlessly compatible
+    const mapped = products.map(p => ({ ...p, images: p.img, description: p.purl }));
+    res.json({ products: mapped });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to fetch products' });
+  }
+});
+
+app.post('/api/seller/products', authenticateToken, requireRole('SELLER'), upload.array('images', 5), async (req, res) => {
+  try {
+    const { name, description, price, mrp, stock, gender, category, material, occasion } = req.body;
+    
+    // Auto Enrichment Layer
+    const nameStr = name.toLowerCase();
+    
+    // Default to strict heuristics
+    let macroCategory = enrichment.extractMacroCategory(nameStr, category);
+    let season = enrichment.extractSeason(nameStr, category, material);
+    let climate = enrichment.extractClimate(nameStr, category, material);
+    let finalOccasion = occasion || enrichment.extractOccasion(nameStr, category);
+    const priceSegment = enrichment.computePriceSegment(parseFloat(price) || 0);
+
+    // LLM Extraction Pipeline
+    try {
+      const llmResult = await llmEnrichment.extractIntelligence(
+        { name, description, category, material }, 
+        { city: req.user.city, state: req.user.state }
+      );
+      if (llmResult) {
+        macroCategory = llmResult.macroCategory || macroCategory;
+        season = llmResult.season || season;
+        climate = llmResult.climate || climate;
+        finalOccasion = llmResult.occasion || finalOccasion;
+      }
+    } catch (llmErr) {
+      console.warn("LLM Overfailing securely to heuristic bounds:", llmErr);
+    }
+
+    // Save image paths array from Cloudinary
+    const imagePaths = req.files ? req.files.map(f => f.path).join(';') : '';
+
+    const product = await prisma.product.create({
+      data: {
+        id: 'seller_' + Date.now().toString(), // Mocks legacy string ID natively
+        sellerId: req.user.id,
+        name,
+        purl: description || '', // Storing raw description securely in legacy format
+        price: parseFloat(price) || 0,
+        mrp: parseFloat(mrp) || 0,
+        img: imagePaths, // Saving Cloudinary block directly into legacy visual stream
+        asin: req.user.businessName, 
+        rating: 4.8, 
+        ratingTotal: 5,
+        gender,
+        category,
+        material,
+        occasion: finalOccasion,
+        macro_category: macroCategory,
+        season,
+        climate,
+        price_segment: priceSegment,
+        city: req.user.city,
+        state: req.user.state,
+        status: 'Active',
+        source: 'seller',
+        remainingStock: parseInt(stock, 10) || 50,
+        weather_priority: 999, // Force boost above automated catalog
+        festival_priority: 999
+      }
+    });
+
+    res.json({ message: 'Product created successfully', product });
+  } catch (error) {
+    console.error('Error creating product:', error);
+    res.status(500).json({ error: 'Failed to create product' });
+  }
+});
+
+app.delete('/api/seller/products/:id', authenticateToken, requireRole('SELLER'), async (req, res) => {
+  try {
+    await prisma.product.deleteMany({
+      where: {
+        id: req.params.id,
+        sellerId: req.user.id 
+      }
+    });
+    res.json({ message: 'Product deleted successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to delete product' });
+  }
 });
 
 app.listen(PORT, () => {

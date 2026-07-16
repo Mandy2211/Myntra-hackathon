@@ -4,6 +4,8 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import MainAppContent from './components/MainAppContent';
 import Login from './components/Login';
 import Signup from './components/Signup';
+import SellerDashboard from './components/SellerDashboard';
+import SearchResults from './components/SearchResults';
 import './App.css';
 
 // Router root wrapper
@@ -20,18 +22,30 @@ function AppRoutes() {
 
   return (
     <Routes>
-      <Route 
-        path="/login" 
-        element={user ? <Navigate to="/" replace /> : <Login />} 
+      <Route
+        path="/login"
+        element={user ? <Navigate to="/" replace /> : <Login />}
       />
-      <Route 
-        path="/register" 
-        element={user ? <Navigate to="/" replace /> : <Signup />} 
+      <Route
+        path="/register"
+        element={user ? <Navigate to="/" replace /> : <Signup />}
       />
       <Route path="/signup" element={<Navigate to="/register" replace />} />
       <Route 
-        path="/" 
-        element={user ? <MainAppContent /> : <Navigate to="/login" replace />} 
+        path="/seller/dashboard" 
+        element={user?.role === 'SELLER' ? <SellerDashboard /> : <Navigate to="/" replace />} 
+      />
+      <Route 
+        path="/search" 
+        element={user ? <SearchResults /> : <Navigate to="/login" replace />} 
+      />
+      <Route
+        path="/"
+        element={
+          user 
+            ? (user.role === 'SELLER' ? <Navigate to="/seller/dashboard" replace /> : <MainAppContent />) 
+            : <Navigate to="/login" replace />
+        }
       />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

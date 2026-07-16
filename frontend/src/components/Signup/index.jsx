@@ -16,6 +16,13 @@ export default function Signup() {
   const [role, setRole] = useState('CUSTOMER');
   const [gender, setGender] = useState('');
   const [state, setStateName] = useState('');
+  const [mobileNumber, setMobileNumber] = useState('');
+  const [businessType, setBusinessType] = useState('');
+  const [businessName, setBusinessName] = useState('');
+  const [gstNumber, setGstNumber] = useState('');
+  const [yearsInBusiness, setYearsInBusiness] = useState('');
+  const [primaryProduct, setPrimaryProduct] = useState('');
+  const [pincode, setPincode] = useState('');
   const [city, setCityName] = useState('');
   const [customTown, setCustomTown] = useState('');
   const [suggestedTown, setSuggestedTown] = useState('');
@@ -80,7 +87,15 @@ export default function Signup() {
       // Get the full state name for the backend
       const fullStateName = states.find(s => s.value === state)?.label || state;
       const finalCity = city === 'OTHERS' ? customTown : city;
-      await register(email, password, role, name, finalCity, fullStateName, gender);
+      const userData = { email, password, role, name, city: finalCity, state: fullStateName, gender };
+      if (role === 'SELLER') {
+        Object.assign(userData, {
+          mobileNumber, businessType, businessName, gstNumber, 
+          yearsInBusiness: yearsInBusiness ? parseInt(yearsInBusiness, 10) : null, 
+          primaryProduct, pincode
+        });
+      }
+      await register(userData);
       navigate('/login');
     } catch (err) {
       console.error(err);
@@ -317,6 +332,55 @@ export default function Signup() {
                         </button>
                       </div>
                     )}
+                  </div>
+                )}
+                {role === 'SELLER' && (
+                  <div className="space-y-4 pt-4 mt-4 border-t border-slate-800/80">
+                    <h4 className="text-xs font-bold text-pink-400 uppercase tracking-wider mb-2">Business Details (Onboarding)</h4>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] text-slate-405 font-bold uppercase tracking-widest">Mobile Number *</label>
+                        <input type="tel" placeholder="Enter mobile number" className="w-full bg-slate-950 text-slate-100 border border-slate-700/60 focus:border-pink-500 rounded-xl py-2 px-3 text-xs focus:outline-none" value={mobileNumber} onChange={(e) => setMobileNumber(e.target.value)} required />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] text-slate-405 font-bold uppercase tracking-widest">Business Type *</label>
+                        <select className="w-full bg-slate-950 text-slate-100 border border-slate-700/60 focus:border-pink-500 rounded-xl py-2 px-3 text-xs focus:outline-none" value={businessType} onChange={(e) => setBusinessType(e.target.value)} required>
+                          <option value="">Select Type</option>
+                          <option value="Registered Brand">Registered Brand</option>
+                          <option value="Local Shop">Local Shop</option>
+                          <option value="Home Business">Home Business</option>
+                          <option value="Artisan">Artisan</option>
+                          <option value="Individual Seller">Individual Seller</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] text-slate-405 font-bold uppercase tracking-widest">Business / Shop Name *</label>
+                        <input type="text" placeholder="Business Name" className="w-full bg-slate-950 text-slate-100 border border-slate-700/60 focus:border-pink-500 rounded-xl py-2 px-3 text-xs focus:outline-none" value={businessName} onChange={(e) => setBusinessName(e.target.value)} required />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] text-slate-405 font-bold uppercase tracking-widest">Primary Product *</label>
+                        <input type="text" placeholder="e.g. Ethnic, Footwear" className="w-full bg-slate-950 text-slate-100 border border-slate-700/60 focus:border-pink-500 rounded-xl py-2 px-3 text-xs focus:outline-none" value={primaryProduct} onChange={(e) => setPrimaryProduct(e.target.value)} required />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] text-slate-405 font-bold uppercase tracking-widest">Years Active *</label>
+                        <input type="number" min="0" placeholder="Yrs" className="w-full bg-slate-950 text-slate-100 border border-slate-700/60 focus:border-pink-500 rounded-xl py-2 px-3 text-xs focus:outline-none" value={yearsInBusiness} onChange={(e) => setYearsInBusiness(e.target.value)} required />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] text-slate-405 font-bold uppercase tracking-widest">Pincode *</label>
+                        <input type="text" placeholder="Zip code" className="w-full bg-slate-950 text-slate-100 border border-slate-700/60 focus:border-pink-500 rounded-xl py-2 px-3 text-xs focus:outline-none" value={pincode} onChange={(e) => setPincode(e.target.value)} required />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] text-slate-405 font-bold uppercase tracking-widest">GST (Optional)</label>
+                        <input type="text" placeholder="GSTIN" className="w-full bg-slate-950 text-slate-100 border border-slate-700/60 focus:border-pink-500 rounded-xl py-2 px-3 text-xs focus:outline-none" value={gstNumber} onChange={(e) => setGstNumber(e.target.value)} />
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>

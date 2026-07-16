@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { ShoppingBag, MapPin, User as UserIcon, LogOut, Sun, CloudRain, ThermometerSnowflake } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { ShoppingBag, MapPin, User as UserIcon, LogOut, Sun, CloudRain, ThermometerSnowflake, Search } from 'lucide-react';
 import { fetchCities } from '../../services/api';
 import DynamicShelf from '../DynamicShelf';
 
@@ -13,6 +14,8 @@ export default function MainAppContent() {
   const [customCityInput, setCustomCityInput] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const navigate = useNavigate();
 
   const [shelves, setShelves] = useState(null);
   const [budgetPicks, setBudgetPicks] = useState(null);
@@ -165,6 +168,39 @@ export default function MainAppContent() {
           </div>
         </div>
 
+        <div className="flex-1 max-w-xl mx-4 hidden md:block">
+          <form 
+            onSubmit={async (e) => {
+              e.preventDefault();
+              if(!searchQuery.trim()) return;
+              try {
+                const token = localStorage.getItem('token');
+                // The API track call happens silently in the background
+                fetch('http://localhost:5000/api/search/track', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                  body: JSON.stringify({ rawQuery: searchQuery })
+                }).catch(err => console.error('Silent search track failed', err));
+                
+                // Navigate immediately to the new search placeholder page
+                navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
+              } catch(err) {
+                console.error('Navigation failed', err);
+              }
+            }}
+            className="flex items-center bg-slate-800/80 rounded-full border border-slate-700 focus-within:border-pink-500/50 px-4 py-2 transition"
+          >
+            <Search className="w-4 h-4 text-slate-400 mr-2" />
+            <input 
+              type="text" 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search for clothes (e.g., 'Red Velvet Dress')..." 
+              className="bg-transparent text-sm focus:outline-none text-slate-200 w-full placeholder:text-slate-500"
+            />
+          </form>
+        </div>
+
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex flex-col sm:flex-row items-center gap-2">
             <div className="flex items-center gap-2 bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700">
@@ -309,15 +345,15 @@ export default function MainAppContent() {
           </div>
         ) : shelves ? (
           <div className="space-y-12">
-            
+
             {shelves.dynamicShelves?.map((shelf, idx) => (
-              <Shelf 
+              <Shelf
                 key={idx}
                 title={shelf.title}
                 products={shelf.products}
               />
             ))}
-            
+
             {/* Budget Picks Area */}
             <div>
               <div className="w-full max-w-md mb-6 bg-slate-900 p-4 rounded-xl border border-slate-800 relative overflow-hidden">
@@ -373,10 +409,10 @@ const Shelf = ({ title, products }) => {
         {products.map(p => (
           <div key={p.id} className="snap-start shrink-0 w-[220px] bg-slate-900 border border-slate-800 rounded-xl overflow-hidden hover:border-pink-500/50 hover:shadow-lg hover:shadow-pink-900/10 transition-all duration-300 group">
             <div className="relative h-[280px] overflow-hidden bg-slate-950">
-              <img 
-                src={p.img?.split(';')[0]} 
-                alt={p.name} 
-                onError={(e) => { 
+              <img
+                src={p.img?.split(';')[0]}
+                alt={p.name}
+                onError={(e) => {
                   if (e.target.src !== '/fallback.png') {
                     e.target.src = '/fallback.png';
                   }
