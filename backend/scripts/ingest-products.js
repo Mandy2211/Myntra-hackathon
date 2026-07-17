@@ -180,7 +180,8 @@ async function run() {
           if (!id) return; // skip invalid rows
 
           batchProducts.push({
-            id, name, img, asin, price, mrp, rating, ratingTotal, discount, seller, purl
+            id, name, img, asin, price, mrp, rating, ratingTotal, discount, seller, purl,
+            remainingStock: Math.floor(Math.random() * 50) + 10
           });
 
           // Extract metadata

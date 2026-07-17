@@ -395,6 +395,28 @@ export default function MainAppContent() {
 }
 
 const Shelf = ({ title, products }) => {
+  const { user } = useAuth();
+
+  const handleBuy = async (productId, cityName, stateName) => {
+    try {
+      const res = await fetch("http://localhost:5000/api/purchase", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId, quantity: 1, cityName, stateName }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        alert(`Order placed. ${data.remainingStock} left in stock.`);
+      } else {
+        alert(data.error ?? "Purchase failed");
+      }
+    } catch (err) {
+      alert("Purchase failed");
+    }
+  };
+
   if (!products || products.length === 0) return null;
 
   return (
@@ -442,6 +464,17 @@ const Shelf = ({ title, products }) => {
                   <span className="text-[10px] font-bold text-amber-400">⭐ {p.rating}</span>
                 </div>
               </div>
+              
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleBuy(p.id, user?.city, user?.state);
+                }}
+                disabled={p.remainingStock === 0}
+                className="mt-3 w-full py-2 rounded-lg bg-pink-600 hover:bg-pink-500 text-white font-bold text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {p.remainingStock === 0 ? "Out of stock" : "Buy"}
+              </button>
             </div>
           </div>
         ))}

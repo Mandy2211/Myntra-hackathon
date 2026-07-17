@@ -9,7 +9,32 @@ export default function SearchResults() {
   const navigate = useNavigate();
   const { user } = useAuth();
   
-  // Minimal header for the search results page
+  const [products, setProducts] = useState(null);
+  const [parsed, setParsed] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!query) return;
+    setLoading(true);
+    
+    const token = sessionStorage.getItem('token');
+    fetch('http://localhost:5000/api/search', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify({ rawQuery: query, city: user?.city, state: user?.state })
+    })
+      .then(res => res.json())
+      .then(data => {
+        setProducts(data.products || []);
+        setParsed(data.parsed || null);
+      })
+      .catch(err => console.error(err))
+      .finally(() => setLoading(false));
+  }, [query, user]);
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans flex flex-col">
       <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-50 px-4 py-3 sm:px-8 flex items-center justify-between gap-4">
@@ -32,21 +57,12 @@ export default function SearchResults() {
           </div>
         </div>
         
-        {/* Mirror the search bar for continuous searching */}
         <div className="flex-1 max-w-xl mx-4">
           <form 
             onSubmit={(e) => {
               e.preventDefault();
               const val = e.target.search.value;
               if(!val.trim()) return;
-              
-              const token = sessionStorage.getItem('token');
-              fetch('http://localhost:5000/api/search/track', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ rawQuery: val })
-              }).catch(err => console.error('Silent search track failed', err));
-              
               navigate(`/search?q=${encodeURIComponent(val)}`);
             }}
             className="flex items-center bg-slate-800/80 rounded-full border border-slate-700 focus-within:border-pink-500/50 px-4 py-2 transition"
@@ -63,34 +79,60 @@ export default function SearchResults() {
         </div>
       </header>
 
-      <main className="flex-1 flex flex-col items-center justify-center p-8 max-w-4xl mx-auto w-full text-center">
-        <div className="bg-slate-900 border border-slate-800 p-12 rounded-3xl shadow-xl w-full">
-          <Search className="w-16 h-16 text-pink-500 mx-auto mb-6 opacity-80" />
-          <h2 className="text-3xl font-bold text-white mb-4">
-            Showing results for: <span className="text-pink-400">"{query}"</span>
-          </h2>
-          <p className="text-slate-400 text-lg mb-8 max-w-2xl mx-auto">
-            This is a placeholder page. The semantic search engine indexing for products is still under construction.
-            However, your search has been successfully parsed by our LLM and securely logged to the Database! 
-          </p>
-          <div className="inline-block bg-slate-950 border border-slate-800 rounded-xl p-4 text-left">
-            <p className="text-sm font-semibold text-emerald-400 mb-2">Internal Telemetry Check</p>
+      <main className="flex-1 p-8 max-w-7xl mx-auto w-full">
+        <h2 className="text-2xl font-bold text-white mb-6">
+          Showing results for: <span className="text-pink-400">"{query}"</span>
+        </h2>
+        
+        {/* Internal Telemetry Check - Requested to keep for Demo */}
+        <div className="mb-8 inline-block bg-slate-900 border border-slate-800 rounded-xl p-4 text-left">
+          <p className="text-sm font-semibold text-emerald-400 mb-2">Internal Telemetry Check</p>
+          {loading ? (
+            <p className="text-xs text-slate-400 font-mono animate-pulse">Extracting intent via LLM...</p>
+          ) : parsed ? (
             <ul className="text-xs text-slate-400 space-y-1 font-mono">
-              <li>Raw Query sent to OpenRouter API</li>
-              <li>JSON format processed: true</li>
-              <li>Structured tags extracted and captured</li>
-              <li>Logged against City: <span className="text-white font-bold">{user?.city}</span></li>
+              <li>Category: {parsed.category}</li>
+              <li>Type: {parsed.type}</li>
+              <li>Colour: {parsed.colour}</li>
+              <li>Material: {parsed.material}</li>
+              <li>Gender: {parsed.gender}</li>
+              <li>Occasion: {parsed.occasion}</li>
+              <li>Budget: {parsed.budget}</li>
             </ul>
-          </div>
-          <div className="mt-8">
-            <button 
-              onClick={() => navigate('/')} 
-              className="bg-slate-800 hover:bg-slate-700 text-white font-semibold py-2 px-6 rounded-lg border border-slate-700 transition"
-            >
-              Go back to Home
-            </button>
-          </div>
+          ) : (
+            <p className="text-xs text-slate-400 font-mono">No parsed data available.</p>
+          )}
         </div>
+
+        {loading ? (
+          <div className="text-center py-20 text-slate-400">Searching...</div>
+        ) : products === null ? (
+          null
+        ) : products.length === 0 ? (
+          <div className="text-center py-20 text-slate-400 bg-slate-900 rounded-2xl border border-slate-800">
+            <Search className="w-12 h-12 mx-auto text-slate-600 mb-4" />
+            <p>No matches found for "{query}" — try a broader term.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {products.map(p => (
+              <div key={p.id} className="bg-slate-900 rounded-xl overflow-hidden border border-slate-800 hover:border-slate-700 transition group cursor-pointer">
+                <div className="aspect-[3/4] overflow-hidden bg-slate-800">
+                  <img src={p.img || p.images?.[0]} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition duration-500" />
+                </div>
+                <div className="p-4">
+                  <h3 className="font-medium text-slate-200 line-clamp-1">{p.name}</h3>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="text-lg font-bold text-white">₹{p.price}</span>
+                    {p.mrp > p.price && (
+                      <span className="text-sm text-slate-500 line-through">₹{p.mrp}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </main>
     </div>
   );

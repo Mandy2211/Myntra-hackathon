@@ -41,10 +41,10 @@ async function run() {
       try {
         await prisma.product.upsert({
           where: { id },
-          update: { name, img, price, mrp, rating, ratingTotal, category, seller },
+          update: { name, img, price, mrp, rating, ratingTotal, category, seller, remainingStock: Math.floor(Math.random() * 50) + 10 },
           create: {
             id, name, img, price, mrp, rating, ratingTotal,
-            category, seller, gender: 'Men', occasion: 'Casual'
+            category, seller, gender: 'Men', occasion: 'Casual', remainingStock: Math.floor(Math.random() * 50) + 10
           }
         });
         console.log(`Upserted ${id}`);

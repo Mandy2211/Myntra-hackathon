@@ -178,7 +178,7 @@ app.get('/api/homepage/shelves', async (req, res) => {
     try {
       // 1. Geocoding
       let geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(resolvedCity)}&count=1`, {
-        signal: AbortSignal.timeout(1500)
+        signal: AbortSignal.timeout(5000)
       });
       let geoData = await geoRes.json();
       if (geoData.results && geoData.results.length > 0) {
@@ -187,7 +187,7 @@ app.get('/api/homepage/shelves', async (req, res) => {
 
         // 2. Weather
         let weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`, {
-          signal: AbortSignal.timeout(1500)
+          signal: AbortSignal.timeout(5000)
         });
         let weatherData = await weatherRes.json();
         if (weatherData.current_weather) {
@@ -205,7 +205,17 @@ app.get('/api/homepage/shelves', async (req, res) => {
     let weatherWhere = {
       climate: climate,
       gender: { contains: targetGender, mode: 'insensitive' },
-      img: { not: '-' }
+      img: { not: '-' },
+      NOT: {
+        OR: [
+          { name: { contains: 'party', mode: 'insensitive' } },
+          { name: { contains: 'festival', mode: 'insensitive' } },
+          { purl: { contains: 'party', mode: 'insensitive' } },
+          { purl: { contains: 'festival', mode: 'insensitive' } },
+          { occasion: { contains: 'party', mode: 'insensitive' } },
+          { occasion: { contains: 'festival', mode: 'insensitive' } }
+        ]
+      }
     };
 
     // Explicit overrides for higher relevance based on climate
@@ -223,6 +233,16 @@ app.get('/api/homepage/shelves', async (req, res) => {
         { category: { contains: 'Jacket', mode: 'insensitive' } },
         { category: { contains: 'Sweatshirt', mode: 'insensitive' } },
         { category: { contains: 'Sweater', mode: 'insensitive' } }
+      ];
+    } else if (climate === 'Rainy') {
+      weatherWhere.OR = [
+        { category: { contains: 'Umbrella', mode: 'insensitive' } },
+        { category: { contains: 'Raincoat', mode: 'insensitive' } },
+        { category: { contains: 'Sweatshirt', mode: 'insensitive' } },
+        { name: { contains: 'Umbrella', mode: 'insensitive' } },
+        { name: { contains: 'Raincoat', mode: 'insensitive' } },
+        { name: { contains: 'Waterproof', mode: 'insensitive' } },
+        { material: { contains: 'Cotton', mode: 'insensitive' } }
       ];
     }
 
@@ -447,17 +467,60 @@ app.get('/api/homepage/budget-picks', async (req, res) => {
   }
 });
 
-// Seller hotspots map (fallback to old behaviour)
-app.get('/api/seller/analytics', authenticateToken, requireRole('SELLER'), async (req, res) => {
-  const { seller } = req.query;
-  const purchases = await prisma.purchase.findMany({
-    where: { product: { seller: { equals: seller, mode: 'insensitive' } } },
-    include: { product: true }
-  });
-  const cityCounts = {};
-  purchases.forEach(p => { cityCounts[p.cityName] = (cityCounts[p.cityName] || 0) + 1; });
-  const hotspots = Object.keys(cityCounts).map(city => ({ city, sales: cityCounts[city] })).sort((a, b) => b.sales - a.sales);
-  res.json({ seller, totalSales: purchases.length, hotspots });
+
+app.get('/api/seller/dashboard', authenticateToken, requireRole('SELLER'), async (req, res) => {
+  try {
+    const { city, state } = req.user;
+
+    const popularSearches = await prisma.searchQuery.groupBy({
+      by: ['type'],
+      where: { state, type: { not: 'NA' } },
+      _count: { type: true },
+      orderBy: { _count: { type: 'desc' } },
+      take: 3
+    });
+
+    const marketInsights = await Promise.all(popularSearches.map(async (search) => {
+      const keyword = search.type;
+      const searchVolume = search._count.type * 100;
+
+      const supplyCount = await prisma.product.count({
+        where: {
+          OR: [
+            { name: { contains: keyword, mode: 'insensitive' } },
+            { category: { contains: keyword, mode: 'insensitive' } },
+            { macro_category: { contains: keyword, mode: 'insensitive' } }
+          ]
+        }
+      });
+
+      let gapScore = 0;
+      if (supplyCount === 0) {
+        gapScore = 100;
+      } else {
+        const ratio = searchVolume / supplyCount;
+        gapScore = Math.min(Math.round((ratio / 10) * 100), 100); 
+      }
+
+      return {
+        keyword,
+        searchVolume,
+        availableProducts: supplyCount,
+        gapScore,
+        recommendation: gapScore > 75 
+          ? `High demand for '${keyword}' detected in ${city} with critical supply shortage. Add stock immediately!`
+          : `Market is saturated with '${keyword}'. Compete on price or add unique variations.`
+      };
+    }));
+
+    res.json({
+      sellerRegion: { city, state },
+      marketInsights
+    });
+  } catch (error) {
+    console.error('Seller dashboard error:', error);
+    res.status(500).json({ error: 'Failed to generate insights' });
+  }
 });
 
 app.get('/api/seller/products', authenticateToken, requireRole('SELLER'), async (req, res) => {
@@ -557,6 +620,173 @@ app.delete('/api/seller/products/:id', authenticateToken, requireRole('SELLER'),
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Failed to delete product' });
+  }
+});
+
+app.get('/api/seller/analytics', authenticateToken, requireRole('SELLER'), async (req, res) => {
+  try {
+    const sellerId = req.user.id;
+
+    const demand = await prisma.purchase.groupBy({
+      by: ["productId"],
+      where: { sellerId },
+      _sum: { quantity: true, priceAtPurchase: true },
+      _count: { _all: true },
+      orderBy: { _sum: { quantity: "desc" } },
+    });
+
+    const productIds = demand.map(d => d.productId);
+    const products = await prisma.product.findMany({ where: { id: { in: productIds } } });
+
+    const productDemand = demand.map(d => {
+      const product = products.find(p => p.id === d.productId);
+      return {
+        productId: d.productId,
+        name: product?.name ?? "Unknown product",
+        img: product?.img,
+        unitsSold: d._sum.quantity ?? 0,
+        revenue: (d._sum.priceAtPurchase ?? 0) * (d._sum.quantity ?? 0),
+        orderCount: d._count._all,
+        remainingStock: product?.remainingStock ?? 0,
+      };
+    });
+
+    const totals = {
+      totalUnits: productDemand.reduce((sum, p) => sum + p.unitsSold, 0),
+      totalRevenue: productDemand.reduce((sum, p) => sum + p.revenue, 0),
+      totalOrders: productDemand.reduce((sum, p) => sum + p.orderCount, 0),
+    };
+
+    // Demand trend over 14 days
+    const since = new Date();
+    since.setDate(since.getDate() - 14);
+
+    const purchases = await prisma.purchase.findMany({
+      where: { sellerId, createdAt: { gte: since } },
+      select: { createdAt: true, quantity: true },
+    });
+
+    const buckets = new Map();
+    for (let i = 0; i < 14; i++) {
+      const d = new Date(since);
+      d.setDate(d.getDate() + i);
+      buckets.set(d.toISOString().slice(0, 10), 0);
+    }
+
+    for (const p of purchases) {
+      const key = p.createdAt.toISOString().slice(0, 10);
+      buckets.set(key, (buckets.get(key) ?? 0) + p.quantity);
+    }
+    const trend = Array.from(buckets.entries()).map(([date, units]) => ({ date, units }));
+
+    // Low stock alert (threshold 5)
+    const lowStock = productDemand
+      .filter(p => p.remainingStock <= 5 && p.unitsSold > 0)
+      .sort((a, b) => a.remainingStock - b.remainingStock);
+
+    res.json({ totals, productDemand, trend, lowStock });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to load analytics" });
+  }
+});
+
+app.post('/api/purchase', async (req, res) => {
+  try {
+    const { productId, quantity = 1, cityName, stateName } = req.body;
+
+    if (!productId || !cityName) {
+      return res.status(400).json({ success: false, error: "productId and cityName are required" });
+    }
+
+    const product = await prisma.product.findUnique({ where: { id: productId } });
+
+    if (!product) {
+      return res.status(404).json({ success: false, error: "Product not found" });
+    }
+
+    if (product.remainingStock < quantity) {
+      return res.status(400).json({ success: false, error: "Not enough stock" });
+    }
+
+    const [purchase, updatedProduct] = await prisma.$transaction([
+      prisma.purchase.create({
+        data: {
+          productId,
+          sellerId: product.sellerId,
+          quantity,
+          priceAtPurchase: product.price,
+          cityName,
+          stateName: stateName ?? "Uttar Pradesh",
+        },
+      }),
+      prisma.product.update({
+        where: { id: productId },
+        data: {
+          remainingStock: { decrement: quantity },
+          ...(product.remainingStock - quantity <= 0 ? { status: "OutOfStock" } : {}),
+        },
+      }),
+    ]);
+
+    return res.json({ success: true, purchase, remainingStock: updatedProduct.remainingStock });
+  } catch (error) {
+    console.error('Purchase error:', error);
+    res.status(500).json({ success: false, error: "Internal server error" });
+  }
+});
+
+app.post('/api/search', authenticateToken, async (req, res) => {
+  try {
+    const { rawQuery, city, state } = req.body;
+
+    const parsed = await llmEnrichment.parseSearchQuery(rawQuery);
+
+    await prisma.searchQuery.create({
+      data: {
+        rawQuery,
+        category: parsed.category ?? "NA",
+        type: parsed.type ?? "NA",
+        colour: parsed.colour ?? "NA",
+        material: parsed.material ?? "NA",
+        gender: parsed.gender ?? "NA",
+        occasion: parsed.occasion ?? "NA",
+        budget: String(parsed.budget ?? "NA"),
+        city: city || req.user?.city || "Unknown",
+        state: state || req.user?.state || "Unknown",
+      },
+    });
+
+    const where = { status: "Active" };
+
+    if (parsed.gender && parsed.gender !== "NA") where.gender = parsed.gender;
+    if (parsed.occasion && parsed.occasion !== "NA") where.occasion = { contains: parsed.occasion, mode: "insensitive" };
+    if (parsed.material && parsed.material !== "NA") where.material = { contains: parsed.material, mode: "insensitive" };
+    if (parsed.budget && parsed.budget !== "NA" && !isNaN(Number(parsed.budget))) {
+      where.price = { lte: Number(parsed.budget) };
+    }
+
+    // category/type/colour don't have dedicated columns for all of them —
+    // fold whichever were extracted into a free-text OR search on name + category
+    const freeTextTerms = [parsed.category, parsed.type, parsed.colour].filter(t => t && t !== "NA");
+    if (freeTextTerms.length) {
+      where.OR = freeTextTerms.flatMap(term => [
+        { name: { contains: term, mode: "insensitive" } },
+        { category: { contains: term, mode: "insensitive" } },
+        { ethnic_style: { contains: term, mode: "insensitive" } },
+      ]);
+    }
+
+    const products = await prisma.product.findMany({
+      where,
+      orderBy: [{ festival_priority: "desc" }, { rating: "desc" }],
+      take: 30,
+    });
+
+    res.json({ parsed, products });
+  } catch (error) {
+    console.error('Search API error:', error);
+    res.status(500).json({ error: "Failed to perform search" });
   }
 });
 

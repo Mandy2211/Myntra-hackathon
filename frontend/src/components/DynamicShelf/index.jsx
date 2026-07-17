@@ -74,6 +74,26 @@ export default function DynamicShelf() {
     return 'Good Evening';
   };
 
+  const handleBuy = async (productId, cityName, stateName) => {
+    try {
+      const res = await fetch("http://localhost:5000/api/purchase", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId, quantity: 1, cityName, stateName }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        alert(`Order placed. ${data.remainingStock} left in stock.`);
+      } else {
+        alert(data.error ?? "Purchase failed");
+      }
+    } catch (err) {
+      alert("Purchase failed");
+    }
+  };
+
   if (loading && !shelfData) {
     return (
       <div className="w-full flex-1 flex flex-col items-center justify-center space-y-4 py-32">
@@ -244,6 +264,17 @@ export default function DynamicShelf() {
                           </span>
                         )}
                       </div>
+                      
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleBuy(product.id, user?.city, user?.state);
+                        }}
+                        disabled={product.remainingStock === 0}
+                        className="mt-3 w-full py-2 rounded-lg bg-pink-600 hover:bg-pink-500 text-white font-bold text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {product.remainingStock === 0 ? "Out of stock" : "Buy"}
+                      </button>
                     </div>
                   </div>
                 ))}

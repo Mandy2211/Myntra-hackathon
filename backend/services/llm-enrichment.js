@@ -54,6 +54,39 @@ If the description mentions rain, Monsoon/Rainy.`;
   }
 }
 
+async function parseSearchQuery(rawQuery) {
+  try {
+    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "meta-llama/llama-3.1-8b-instruct",
+        messages: [
+          {
+            role: "system",
+            content: `Extract shopping search intent as strict JSON only, no markdown fences.
+Fields: category, type, colour, material, gender, occasion, budget.
+Use "NA" for any field not mentioned. budget should be a number (max price in INR) or "NA".
+Example: {"category":"dress","type":"long dress","colour":"NA","material":"NA","gender":"Women","occasion":"party","budget":"NA"}`,
+          },
+          { role: "user", content: rawQuery },
+        ],
+      }),
+    });
+
+    const data = await res.json();
+    const raw = data.choices[0].message.content.trim();
+    return JSON.parse(raw.replace(/^```json\s*|\s*```$/g, ""));
+  } catch (err) {
+    console.error("LLM Search Parse Error:", err);
+    return { category: "NA", type: "NA", colour: "NA", material: "NA", gender: "NA", occasion: "NA", budget: "NA" };
+  }
+}
+
 module.exports = {
-  extractIntelligence
+  extractIntelligence,
+  parseSearchQuery
 };

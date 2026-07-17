@@ -4,6 +4,7 @@ import { TrendingUp, AlertTriangle, CheckCircle, Search, Activity, Package, Plus
 import { useNavigate } from 'react-router-dom';
 import UploadForm from './UploadForm';
 import ProductsTable from './ProductsTable';
+import { SellerTrendChart } from './SellerTrendChart';
 
 export default function SellerDashboard() {
   const { user, logout } = useAuth();
@@ -89,6 +90,12 @@ export default function SellerDashboard() {
             >
               <Plus className="w-4 h-4" /> Upload Catalog
             </button>
+            <button 
+              onClick={() => setActiveTab('analytics')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${activeTab === 'analytics' ? 'bg-gradient-to-r from-pink-600 to-purple-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'}`}
+            >
+              <TrendingUp className="w-4 h-4" /> Sales Analytics
+            </button>
           </nav>
           
           <button onClick={() => navigate('/')} className="block w-full text-center text-xs font-medium text-pink-400 hover:text-pink-300 mt-12 pt-4 pb-2 border-t border-slate-800">
@@ -146,6 +153,12 @@ export default function SellerDashboard() {
             </div>
           )}
 
+          {activeTab === 'analytics' && (
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+               <AnalyticsTab />
+            </div>
+          )}
+
         </main>
       </div>
     </div>
@@ -196,6 +209,112 @@ function GapCard({ insight }) {
           {isHighOpportunity ? <CheckCircle className="w-4 h-4 shrink-0 mt-0.5" /> : <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />}
           {insight.recommendation}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function AnalyticsTab() {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchAnalytics = async () => {
+      try {
+        const token = sessionStorage.getItem('token');
+        const res = await fetch('http://localhost:5000/api/seller/analytics', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const json = await res.json();
+          setData(json);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAnalytics();
+  }, []);
+
+  if (loading) {
+    return <div className="text-slate-400 text-center py-12">Loading Analytics...</div>;
+  }
+
+  if (!data) return null;
+
+  return (
+    <div className="space-y-8">
+      <header className="mb-6">
+        <h2 className="text-2xl font-bold flex items-center gap-2">
+          <TrendingUp className="text-pink-500" /> Sales Analytics
+        </h2>
+        <p className="text-sm text-slate-400 mt-1">Track your product demand and revenue.</p>
+      </header>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl">
+          <div className="text-sm text-slate-400 font-bold uppercase mb-1">Units Sold</div>
+          <div className="text-3xl font-black text-white">{data.totals.totalUnits}</div>
+        </div>
+        <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl">
+          <div className="text-sm text-slate-400 font-bold uppercase mb-1">Revenue</div>
+          <div className="text-3xl font-black text-emerald-400">₹{data.totals.totalRevenue.toFixed(0)}</div>
+        </div>
+        <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl">
+          <div className="text-sm text-slate-400 font-bold uppercase mb-1">Orders</div>
+          <div className="text-3xl font-black text-white">{data.totals.totalOrders}</div>
+        </div>
+      </div>
+
+      {data.lowStock && data.lowStock.length > 0 && (
+        <div className="bg-amber-950/40 border border-amber-900/50 p-4 rounded-xl mb-6 flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+          <div>
+            <h4 className="text-amber-400 font-bold text-sm">Restock Alert</h4>
+            <p className="text-amber-200/80 text-xs mt-1">
+              {data.lowStock.map(p => `${p.name} (${p.remainingStock} left)`).join(", ")}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {data.trend && <SellerTrendChart trend={data.trend} />}
+
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden mt-8">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="bg-slate-950 border-b border-slate-800 text-xs uppercase tracking-widest text-slate-400">
+              <th className="px-6 py-4 font-semibold">Product</th>
+              <th className="px-6 py-4 font-semibold text-center">Units Sold</th>
+              <th className="px-6 py-4 font-semibold text-right">Revenue</th>
+              <th className="px-6 py-4 font-semibold text-center">Stock Left</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-800/50">
+            {data.productDemand.map(p => (
+              <tr key={p.productId} className="hover:bg-slate-800/30 transition-colors">
+                <td className="px-6 py-4 text-sm font-medium text-slate-200">
+                  <div className="flex items-center gap-3">
+                    {p.img && <img src={p.img.split(';')[0]} alt={p.name} className="w-10 h-10 rounded-md object-cover bg-slate-800" />}
+                    <span className="line-clamp-2" title={p.name}>{p.name}</span>
+                  </div>
+                </td>
+                <td className="px-6 py-4 text-sm font-bold text-center text-rose-400">{p.unitsSold}</td>
+                <td className="px-6 py-4 text-sm font-bold text-right text-emerald-400">₹{p.revenue.toFixed(0)}</td>
+                <td className="px-6 py-4 text-sm font-medium text-center text-slate-400">{p.remainingStock}</td>
+              </tr>
+            ))}
+            {data.productDemand.length === 0 && (
+              <tr>
+                <td colSpan="4" className="px-6 py-12 text-center text-slate-500 text-sm">
+                  No sales recorded yet.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   );

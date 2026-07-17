@@ -23,11 +23,20 @@ async function seed() {
   for (let i = 0; i < 100; i++) {
     const p = products[Math.floor(Math.random() * products.length)];
     const c = cities[Math.floor(Math.random() * cities.length)];
+    
+    const daysAgo = Math.floor(Math.random() * 14);
+    const date = new Date();
+    date.setDate(date.getDate() - daysAgo);
+
     await prisma.purchase.create({
       data: {
         cityName: c.city,
         stateName: c.state,
-        Product: { connect: { id: p.id } }
+        productId: p.id,
+        sellerId: p.sellerId,
+        quantity: Math.floor(Math.random() * 3) + 1,
+        priceAtPurchase: p.price,
+        createdAt: date
       }
     });
     count++;
