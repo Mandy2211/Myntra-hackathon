@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { TrendingUp, AlertTriangle, CheckCircle, Search, Activity, Package, Plus, LayoutDashboard, LogOut } from 'lucide-react';
+import { TrendingUp, AlertTriangle, CheckCircle, Search, Activity, Package, Plus, LayoutDashboard, LogOut, Lightbulb } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import UploadForm from './UploadForm';
 import ProductsTable from './ProductsTable';
-import { SellerTrendChart } from './SellerTrendChart';
+import CategoryRequestForm from './CategoryRequestForm';
+import { SellerTrendChart, SellerCategoryPieChart, MarketGapChart } from './SellerTrendChart';
 
 export default function SellerDashboard() {
   const { user, logout } = useAuth();
@@ -96,6 +97,12 @@ export default function SellerDashboard() {
             >
               <TrendingUp className="w-4 h-4" /> Sales Analytics
             </button>
+            <button 
+              onClick={() => setActiveTab('request-category')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${activeTab === 'request-category' ? 'bg-gradient-to-r from-pink-600 to-purple-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'}`}
+            >
+              <Lightbulb className="w-4 h-4" /> Suggest Category
+            </button>
           </nav>
           
           <button onClick={() => navigate('/')} className="block w-full text-center text-xs font-medium text-pink-400 hover:text-pink-300 mt-12 pt-4 pb-2 border-t border-slate-800">
@@ -138,6 +145,12 @@ export default function SellerDashboard() {
                   </div>
                 )}
               </div>
+
+              {data?.marketInsights?.length > 0 && (
+                <div className="mt-8">
+                  <MarketGapChart insights={data.marketInsights} />
+                </div>
+              )}
             </div>
           )}
 
@@ -156,6 +169,12 @@ export default function SellerDashboard() {
           {activeTab === 'analytics' && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                <AnalyticsTab />
+            </div>
+          )}
+
+          {activeTab === 'request-category' && (
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-4xl">
+               <CategoryRequestForm />
             </div>
           )}
 
@@ -280,7 +299,10 @@ function AnalyticsTab() {
         </div>
       )}
 
-      {data.trend && <SellerTrendChart trend={data.trend} />}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        {data.trend && <SellerTrendChart trend={data.trend} />}
+        {data.categoryBreakdown && <SellerCategoryPieChart data={data.categoryBreakdown} />}
+      </div>
 
       <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden mt-8">
         <table className="w-full text-left border-collapse">

@@ -5,6 +5,22 @@ import { ShoppingBag, MapPin, User as UserIcon, LogOut, Sun, CloudRain, Thermome
 import { fetchCities } from '../../services/api';
 import DynamicShelf from '../DynamicShelf';
 
+const fetchFallbackPincode = async (cityName) => {
+  try {
+    console.log(`[Fallback Ping] Fetching pincode dynamically for: ${cityName}`);
+    const res = await fetch(`https://api.postalpincode.in/postoffice/${cityName}`);
+    const data = await res.json();
+    if (data && data[0] && data[0].Status === "Success" && data[0].PostOffice && data[0].PostOffice.length > 0) {
+      const pin = data[0].PostOffice[0].Pincode;
+      console.log(`[Fallback Ping] Success! Found pincode: ${pin}`);
+      return pin;
+    }
+  } catch (err) {
+    console.error("Fallback pincode fetch failed:", err);
+  }
+  return null;
+};
+
 export default function MainAppContent() {
   const { user, logout, updateCity } = useAuth();
 
@@ -57,12 +73,17 @@ export default function MainAppContent() {
       setLoadingShelves(true);
       try {
         const token = sessionStorage.getItem('token');
-        const query = new URLSearchParams({
+        const queryParams = {
           city: user?.city || 'Coimbatore',
           state: user?.state || 'Tamil Nadu',
           gender: user?.gender || 'Men',
           maxPrice: budget // Send current budget so initial structure syncs
-        });
+        };
+        const activePin = user?.exactLocation?.addressInfo?.postcode || user?.pincode;
+        if (activePin) {
+          queryParams.pincode = activePin;
+        }
+        const query = new URLSearchParams(queryParams);
         const res = await fetch(`http://localhost:5000/api/homepage/shelves?${query}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -121,11 +142,20 @@ export default function MainAppContent() {
             const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${position.coords.latitude}&lon=${position.coords.longitude}`);
             const data = await res.json();
             const detectCity = data.address.city || data.address.town || data.address.state_district || "Unknown";
+            let finalAddressInfo = { ...data.address };
+            
+            if (!finalAddressInfo.postcode) {
+              const fallbackPin = await fetchFallbackPincode(detectCity);
+              if (fallbackPin) {
+                finalAddressInfo.postcode = fallbackPin;
+              }
+            }
+
             const exactLocation = {
               displayName: data.display_name,
               lat: position.coords.latitude,
               lon: position.coords.longitude,
-              addressInfo: data.address
+              addressInfo: finalAddressInfo
             };
 
             updateCity(detectCity, exactLocation);
@@ -174,15 +204,7 @@ export default function MainAppContent() {
               e.preventDefault();
               if(!searchQuery.trim()) return;
               try {
-                const token = sessionStorage.getItem('token');
-                // The API track call happens silently in the background
-                fetch('http://localhost:5000/api/search/track', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                  body: JSON.stringify({ rawQuery: searchQuery })
-                }).catch(err => console.error('Silent search track failed', err));
-                
-                // Navigate immediately to the new search placeholder page
+                // Navigate immediately to the new search results page
                 navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
               } catch(err) {
                 console.error('Navigation failed', err);
@@ -227,12 +249,20 @@ export default function MainAppContent() {
                         return (
                           <div
                             key={loc.place_id}
-                            onClick={() => {
+                            onClick={async () => {
+                              let finalAddressInfo = { ...loc.address };
+                              if (!finalAddressInfo.postcode) {
+                                const fallbackPin = await fetchFallbackPincode(cityName);
+                                if (fallbackPin) {
+                                  finalAddressInfo.postcode = fallbackPin;
+                                }
+                              }
+
                               updateCity(cityName, {
                                 displayName: loc.display_name,
                                 lat: loc.lat,
                                 lon: loc.lon,
-                                addressInfo: loc.address
+                                addressInfo: finalAddressInfo
                               });
                               setCustomCityMode(false);
                               setCustomCityInput('');
@@ -257,6 +287,11 @@ export default function MainAppContent() {
                     {user?.exactLocation?.displayName && (
                       <span className="text-[10px] text-slate-400 px-1 max-w-[220px] truncate" title={user.exactLocation.displayName}>
                         {user.exactLocation.displayName}
+                      </span>
+                    )}
+                    {user?.exactLocation?.addressInfo?.postcode && (
+                      <span className="text-[9px] font-bold text-emerald-400 px-1">
+                        PIN: {user.exactLocation.addressInfo.postcode}
                       </span>
                     )}
                   </div>

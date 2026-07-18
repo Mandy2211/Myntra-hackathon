@@ -154,6 +154,10 @@ export default function UploadForm({ onSuccess }) {
               <option value="Top">Top</option><option value="Jeans">Jeans</option><option value="Trouser">Trouser</option>
               <option value="Saree">Saree</option><option value="Shorts">Shorts</option><option value="T-Shirt">T-Shirt</option>
               <option value="Lehenga">Lehenga</option><option value="Skincare">Skincare</option><option value="Shoes">Shoes</option>
+              <option value="Raincoats">Raincoats</option>
+              <option value="Kurti Sets">Kurti Sets</option>
+              <option value="Umbrella">Umbrella</option>
+              <option value="Accessories">Accessories</option>
               {/* Added common ones from instructions */}
             </select>
           </div>
@@ -177,6 +181,7 @@ export default function UploadForm({ onSuccess }) {
               <option value="Sports">Sports</option>
               <option value="Formal">Formal</option>
               <option value="Party Wear">Party Wear</option>
+              <option value="Seasonal">Seasonal</option>
             </select>
           </div>
         </div>

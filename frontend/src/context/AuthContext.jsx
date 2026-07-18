@@ -108,7 +108,12 @@ export const AuthProvider = ({ children }) => {
     if (!user) return;
     try {
       // Opt-in sync with backend profile database record
-      setUser(prev => ({ ...prev, city: cityName, state: exactLocation?.addressInfo?.state || prev.state }));
+      setUser(prev => ({ 
+        ...prev, 
+        city: cityName, 
+        state: exactLocation?.addressInfo?.state || prev.state,
+        exactLocation 
+      }));
       await fetch(`${API_BASE}/auth/login`, {
         method: 'POST',
         headers: { 

@@ -25,6 +25,7 @@ model User {
   primaryProduct  String?
   pincode         String?
   Products        Product[]
+  CategoryRequests CategoryRequest[]
 }
 
 
@@ -56,6 +57,7 @@ model Product {
   sellerId          String?
   city              String?
   state             String?
+  pincode           String?
   status            String  @default("Active")
   remainingStock    Int     @default(0)
   source            String  @default("imported")
@@ -97,4 +99,19 @@ model CityContext {
   climate        String
   activeFestival String
   preferredTags  String[]
+}
+
+model CategoryRequest {
+  id             String   @id @default(uuid())
+  sellerId       String
+  categoryName   String
+  gender         String
+  isSeasonal     Boolean  @default(false)
+  origin         String   @default("Normal")
+  description    String
+  sampleImageUrl String?
+  status         String   @default("Pending")
+  createdAt      DateTime @default(now())
+
+  Seller         User     @relation(fields: [sellerId], references: [id])
 }

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { Search, ArrowLeft, ShoppingBag } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -13,8 +13,13 @@ export default function SearchResults() {
   const [parsed, setParsed] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  const lastQuery = useRef('');
+
   useEffect(() => {
     if (!query) return;
+    if (lastQuery.current === query) return;
+    lastQuery.current = query;
+
     setLoading(true);
     
     const token = sessionStorage.getItem('token');

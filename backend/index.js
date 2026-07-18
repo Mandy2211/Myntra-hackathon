@@ -10,6 +10,7 @@ const { v2: cloudinary } = require('cloudinary');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const enrichment = require('./services/enrichment');
 const llmEnrichment = require('./services/llm-enrichment');
+const searchIntelligence = require('./services/search-intelligence');
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -97,7 +98,10 @@ app.get('/api/cities', async (req, res) => {
 });
 
 app.post('/api/auth/register', async (req, res) => {
-  const { email, password, role, name, city, state, gender } = req.body;
+  const { 
+    email, password, role, name, city, state, gender, 
+    pincode, mobileNumber, businessType, businessName, gstNumber, yearsInBusiness, primaryProduct 
+  } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
 
   const targetRole = role === 'SELLER' ? 'SELLER' : 'CUSTOMER';
@@ -114,11 +118,18 @@ app.post('/api/auth/register', async (req, res) => {
         gender: gender || 'Men',
         name: name || `${targetRole} ${email.split('@')[0]}`,
         city: city || 'Coimbatore',
-        state: state || 'Tamil Nadu'
+        state: state || 'Tamil Nadu',
+        pincode: pincode || null,
+        mobileNumber: mobileNumber || null,
+        businessType: businessType || null,
+        businessName: businessName || null,
+        gstNumber: gstNumber || null,
+        yearsInBusiness: yearsInBusiness ? parseInt(yearsInBusiness, 10) : null,
+        primaryProduct: primaryProduct || null
       }
     });
 
-    const payload = { id: user.id, email: user.email, role: user.role, gender: user.gender, city: user.city, state: user.state, name: user.name };
+    const payload = { id: user.id, email: user.email, role: user.role, gender: user.gender, city: user.city, state: user.state, name: user.name, pincode: user.pincode };
     const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
 
     const { passwordHash: _, ...u } = user;
@@ -139,7 +150,7 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    const payload = { id: user.id, email: user.email, role: user.role, gender: user.gender, city: user.city, state: user.state, name: user.name };
+    const payload = { id: user.id, email: user.email, role: user.role, gender: user.gender, city: user.city, state: user.state, name: user.name, pincode: user.pincode };
     const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
     const { passwordHash: _, ...u } = user;
     res.json({ user: u, token });
@@ -167,7 +178,7 @@ app.put('/api/auth/profile', authenticateToken, async (req, res) => {
 
 app.get('/api/homepage/shelves', async (req, res) => {
   try {
-    const { city, state, gender, maxPrice } = req.query;
+    const { city, state, gender, maxPrice, pincode } = req.query;
     const resolvedCity = city || 'Coimbatore';
     const resolvedState = state || 'Tamil Nadu';
     const targetGender = gender || 'Men'; // Default for demo
@@ -269,18 +280,55 @@ app.get('/api/homepage/shelves', async (req, res) => {
         weatherPicks.push(...nationalWeather.filter(nw => !weatherPicks.find(wp => wp.id === nw.id)));
     }
 
-    // Dedicated Local Shelf
-    const localPicks = await prisma.product.findMany({
-      where: {
-        city: { equals: resolvedCity, mode: 'insensitive' },
-        gender: { contains: targetGender, mode: 'insensitive' },
-        img: { not: '-' }
-      },
-      orderBy: [
-        { rating: 'desc' }
-      ],
-      take: 15
-    });
+    // Dedicated Local Shelf Engine (3-Tier Pincode Matching)
+    let localPicks = [];
+
+    if (pincode && pincode.length === 6) {
+      // Tier 1: Exact Pincode
+      localPicks = await prisma.product.findMany({
+        where: {
+          pincode: pincode,
+          gender: { contains: targetGender, mode: 'insensitive' },
+          img: { not: '-' }
+        },
+        orderBy: [{ rating: 'desc' }],
+        take: 15
+      });
+      
+      // Tier 2: 3-Digit District Prefix
+      if (localPicks.length < 15) {
+        const prefix = pincode.substring(0, 3);
+        const districtPicks = await prisma.product.findMany({
+          where: {
+            pincode: { startsWith: prefix },
+            gender: { contains: targetGender, mode: 'insensitive' },
+            img: { not: '-' },
+            id: { notIn: localPicks.map(p => p.id) }
+          },
+          orderBy: [{ rating: 'desc' }],
+          take: 15 - localPicks.length
+        });
+        localPicks.push(...districtPicks);
+      }
+    }
+
+    // Tier 3: State-Level or Exact City Fallback
+    if (localPicks.length < 15) {
+      const cityPicks = await prisma.product.findMany({
+        where: {
+          OR: [
+            { city: { equals: resolvedCity, mode: 'insensitive' } },
+            { state: { equals: resolvedState, mode: 'insensitive' } }
+          ],
+          gender: { contains: targetGender, mode: 'insensitive' },
+          img: { not: '-' },
+          id: { notIn: localPicks.map(p => p.id) }
+        },
+        orderBy: [{ rating: 'desc' }],
+        take: 15 - localPicks.length
+      });
+      localPicks.push(...cityPicks);
+    }
 
     // Budget Picks
     const budgetPicks = await prisma.product.findMany({
@@ -477,15 +525,16 @@ app.get('/api/seller/dashboard', authenticateToken, requireRole('SELLER'), async
       where: { state, type: { not: 'NA' } },
       _count: { type: true },
       orderBy: { _count: { type: 'desc' } },
-      take: 3
+      take: 6
     });
 
     const marketInsights = await Promise.all(popularSearches.map(async (search) => {
       const keyword = search.type;
-      const searchVolume = search._count.type * 100;
+      const searchVolume = search._count.type;
 
       const supplyCount = await prisma.product.count({
         where: {
+          city: city,
           OR: [
             { name: { contains: keyword, mode: 'insensitive' } },
             { category: { contains: keyword, mode: 'insensitive' } },
@@ -593,6 +642,7 @@ app.post('/api/seller/products', authenticateToken, requireRole('SELLER'), uploa
         price_segment: priceSegment,
         city: req.user.city,
         state: req.user.state,
+        pincode: req.user.pincode,
         status: 'Active',
         source: 'seller',
         remainingStock: parseInt(stock, 10) || 50,
@@ -605,6 +655,48 @@ app.post('/api/seller/products', authenticateToken, requireRole('SELLER'), uploa
   } catch (error) {
     console.error('Error creating product:', error);
     res.status(500).json({ error: 'Failed to create product' });
+  }
+});
+
+app.post('/api/seller/category-request', authenticateToken, requireRole('SELLER'), upload.single('sampleImage'), async (req, res) => {
+  try {
+    const { categoryName, gender, isSeasonal, origin, description } = req.body;
+    
+    // Attempt extracting cloudinary image URL safely
+    let sampleImageUrl = null;
+    if (req.file && req.file.path) {
+      sampleImageUrl = req.file.path;
+    }
+
+    const request = await prisma.categoryRequest.create({
+      data: {
+        sellerId: req.user.id,
+        categoryName,
+        gender,
+        isSeasonal: isSeasonal === 'true' || isSeasonal === true,
+        origin,
+        description,
+        sampleImageUrl
+      }
+    });
+
+    res.json({ message: 'Category request submitted successfully', request });
+  } catch (error) {
+    console.error('Error submitting category request:', error);
+    res.status(500).json({ error: 'Failed to submit request' });
+  }
+});
+
+app.get('/api/seller/category-requests', authenticateToken, requireRole('SELLER'), async (req, res) => {
+  try {
+    const requests = await prisma.categoryRequest.findMany({
+      where: { sellerId: req.user.id },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json({ requests });
+  } catch (error) {
+    console.error('Error fetching requests:', error);
+    res.status(500).json({ error: 'Failed to fetch requests' });
   }
 });
 
@@ -643,6 +735,7 @@ app.get('/api/seller/analytics', authenticateToken, requireRole('SELLER'), async
       return {
         productId: d.productId,
         name: product?.name ?? "Unknown product",
+        category: product?.category ?? "Uncategorized",
         img: product?.img,
         unitsSold: d._sum.quantity ?? 0,
         revenue: (d._sum.priceAtPurchase ?? 0) * (d._sum.quantity ?? 0),
@@ -656,6 +749,22 @@ app.get('/api/seller/analytics', authenticateToken, requireRole('SELLER'), async
       totalRevenue: productDemand.reduce((sum, p) => sum + p.revenue, 0),
       totalOrders: productDemand.reduce((sum, p) => sum + p.orderCount, 0),
     };
+
+    // Category Pie Chart Aggregation
+    const categoryMap = new Map();
+    productDemand.forEach(p => {
+      if (p.unitsSold > 0) {
+        let cat = p.category;
+        // Clean up empty or 'NA' categories
+        if (!cat || cat.toUpperCase() === 'NA') cat = 'Other';
+        categoryMap.set(cat, (categoryMap.get(cat) || 0) + p.unitsSold);
+      }
+    });
+    
+    // Sort so largest categories are first
+    const categoryBreakdown = Array.from(categoryMap.entries())
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
 
     // Demand trend over 14 days
     const since = new Date();
@@ -684,7 +793,7 @@ app.get('/api/seller/analytics', authenticateToken, requireRole('SELLER'), async
       .filter(p => p.remainingStock <= 5 && p.unitsSold > 0)
       .sort((a, b) => a.remainingStock - b.remainingStock);
 
-    res.json({ totals, productDemand, trend, lowStock });
+    res.json({ totals, productDemand, trend, lowStock, categoryBreakdown });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Failed to load analytics" });
@@ -739,8 +848,7 @@ app.post('/api/purchase', async (req, res) => {
 app.post('/api/search', authenticateToken, async (req, res) => {
   try {
     const { rawQuery, city, state } = req.body;
-
-    const parsed = await llmEnrichment.parseSearchQuery(rawQuery);
+    const parsed = await searchIntelligence.parseSearchQuery(rawQuery);
 
     await prisma.searchQuery.create({
       data: {

@@ -27,6 +27,8 @@ export default function Signup() {
   const [customTown, setCustomTown] = useState('');
   const [suggestedTown, setSuggestedTown] = useState('');
   const [loading, setLoading] = useState(false);
+  const [pinStatus, setPinStatus] = useState('idle');
+  const [pinMsg, setPinMsg] = useState('');
 
   const states = State.getStatesOfCountry('IN').map(s => ({ value: s.isoCode, label: s.name }));
   const cities = state ? City.getCitiesOfState('IN', state).map(c => ({ value: c.name, label: c.name })) : [];
@@ -37,6 +39,42 @@ export default function Signup() {
     setCustomTown('');
     setSuggestedTown('');
   }, [state]);
+
+  const validatePincode = async (code) => {
+    if (!code || code.length !== 6) {
+      setPinStatus('error');
+      setPinMsg('Pincode must be 6 digits');
+      return;
+    }
+    if (!state) {
+      setPinStatus('error');
+      setPinMsg('Select a state first');
+      return;
+    }
+    setPinStatus('checking');
+    try {
+      const res = await fetch(`https://api.postalpincode.in/pincode/${code}`);
+      const data = await res.json();
+      if (data && data[0] && data[0].Status === "Success" && data[0].PostOffice && data[0].PostOffice.length > 0) {
+        const fullStateName = states.find(s => s.value === state)?.label || state;
+        const matchedState = data[0].PostOffice[0].State;
+        
+        if (matchedState.toLowerCase().includes(fullStateName.toLowerCase()) || fullStateName.toLowerCase().includes(matchedState.toLowerCase())) {
+           setPinStatus('success');
+           setPinMsg(`Verified: ${data[0].PostOffice[0].District}`);
+        } else {
+           setPinStatus('error');
+           setPinMsg(`Mismatch: Belongs to ${matchedState}`);
+        }
+      } else {
+        setPinStatus('error');
+        setPinMsg('Invalid Pincode');
+      }
+    } catch (err) {
+      setPinStatus('error');
+      setPinMsg('Validation failed');
+    }
+  };
 
   useEffect(() => {
     if (city === 'OTHERS' && customTown.length > 2) {
@@ -87,12 +125,19 @@ export default function Signup() {
       // Get the full state name for the backend
       const fullStateName = states.find(s => s.value === state)?.label || state;
       const finalCity = city === 'OTHERS' ? customTown : city;
-      const userData = { email, password, role, name, city: finalCity, state: fullStateName, gender };
+
+      if (pinStatus === 'error' || pinStatus === 'checking') {
+        setError('Please enter a valid verified pincode');
+        setLoading(false);
+        return;
+      }
+
+      const userData = { email, password, role, name, city: finalCity, state: fullStateName, gender, pincode };
       if (role === 'SELLER') {
         Object.assign(userData, {
           mobileNumber, businessType, businessName, gstNumber, 
           yearsInBusiness: yearsInBusiness ? parseInt(yearsInBusiness, 10) : null, 
-          primaryProduct, pincode
+          primaryProduct
         });
       }
       await register(userData);
@@ -305,6 +350,30 @@ export default function Signup() {
                   </div>
                 </div>
 
+                <div className="space-y-1.5">
+                  <label className="text-[10px] text-slate-405 font-bold uppercase tracking-widest flex flex-wrap items-center gap-2">
+                    Postal Pincode *
+                    {pinStatus === 'checking' && <span className="text-amber-400 lowercase text-[9px]">Checking...</span>}
+                    {pinStatus === 'success' && <span className="text-emerald-400 lowercase text-[9px]">✓ {pinMsg}</span>}
+                    {pinStatus === 'error' && <span className="text-rose-400 lowercase text-[9px]">✗ {pinMsg}</span>}
+                  </label>
+                  <div className="relative">
+                    <input 
+                      type="text" 
+                      placeholder="6-digit Zip code" 
+                      className={`w-full bg-slate-950 text-slate-100 border ${pinStatus === 'error' ? 'border-rose-500/60' : pinStatus === 'success' ? 'border-emerald-500/60' : 'border-slate-700/60'} focus:border-pink-500 rounded-xl py-2.5 px-3 text-xs focus:outline-none transition-all duration-200`}
+                      value={pincode} 
+                      onChange={(e) => {
+                        setPincode(e.target.value);
+                        if (e.target.value.length === 6) validatePincode(e.target.value);
+                        else setPinStatus('idle');
+                      }} 
+                      onBlur={() => validatePincode(pincode)}
+                      required 
+                    />
+                  </div>
+                </div>
+
                 {city === 'OTHERS' && (
                   <div className="space-y-1.5 bg-slate-900/80 p-3 rounded-xl border border-slate-800">
                     <label className="text-[10px] text-pink-400 font-bold uppercase tracking-widest">Enter your town</label>
@@ -373,10 +442,6 @@ export default function Signup() {
                         <input type="number" min="0" placeholder="Yrs" className="w-full bg-slate-950 text-slate-100 border border-slate-700/60 focus:border-pink-500 rounded-xl py-2 px-3 text-xs focus:outline-none" value={yearsInBusiness} onChange={(e) => setYearsInBusiness(e.target.value)} required />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="text-[10px] text-slate-405 font-bold uppercase tracking-widest">Pincode *</label>
-                        <input type="text" placeholder="Zip code" className="w-full bg-slate-950 text-slate-100 border border-slate-700/60 focus:border-pink-500 rounded-xl py-2 px-3 text-xs focus:outline-none" value={pincode} onChange={(e) => setPincode(e.target.value)} required />
-                      </div>
-                      <div className="space-y-1.5">
                         <label className="text-[10px] text-slate-405 font-bold uppercase tracking-widest">GST (Optional)</label>
                         <input type="text" placeholder="GSTIN" className="w-full bg-slate-950 text-slate-100 border border-slate-700/60 focus:border-pink-500 rounded-xl py-2 px-3 text-xs focus:outline-none" value={gstNumber} onChange={(e) => setGstNumber(e.target.value)} />
                       </div>
@@ -387,7 +452,7 @@ export default function Signup() {
 
               <button 
                 type="submit" 
-                disabled={loading}
+                disabled={loading || pinStatus === 'error' || pinStatus === 'checking'}
                 className="w-full bg-gradient-to-r from-pink-650 to-purple-650 text-white font-semibold py-2.5 rounded-xl text-xs hover:shadow-lg transition-all duration-300 disabled:opacity-50 mt-4 active:scale-[0.98]"
               >
                 {loading ? 'Processing...' : 'Create Account'}
