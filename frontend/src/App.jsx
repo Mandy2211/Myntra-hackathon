@@ -6,6 +6,8 @@ import Login from './components/Login';
 import Signup from './components/Signup';
 import SellerDashboard from './components/SellerDashboard';
 import SearchResults from './components/SearchResults';
+import UserProfile from './components/UserProfile';
+import AdminDashboard from './components/AdminDashboard';
 import './App.css';
 
 // Router root wrapper
@@ -39,11 +41,24 @@ function AppRoutes() {
         path="/search" 
         element={user ? <SearchResults /> : <Navigate to="/login" replace />} 
       />
+      <Route 
+        path="/profile" 
+        element={user?.role === 'CUSTOMER' ? <UserProfile /> : <Navigate to="/" replace />} 
+      />
+      <Route 
+        path="/admin" 
+        element={user?.role === 'ADMIN' ? <AdminDashboard /> : <Navigate to="/" replace />} 
+      />
       <Route
         path="/"
         element={
           user 
-            ? (user.role === 'SELLER' ? <Navigate to="/seller/dashboard" replace /> : <MainAppContent />) 
+            ? (user.role === 'SELLER' 
+                ? <Navigate to="/seller/dashboard" replace /> 
+                : user.role === 'ADMIN'
+                  ? <Navigate to="/admin" replace />
+                  : <MainAppContent />
+              ) 
             : <Navigate to="/login" replace />
         }
       />

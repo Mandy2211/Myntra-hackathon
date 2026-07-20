@@ -59,6 +59,31 @@ function hashPassword(password) {
   return crypto.createHash('sha256').update(password).digest('hex');
 }
 
+// ─── Admin Auto-Seed ──────────────────────────────────────────────────────────
+async function seedAdmin() {
+  try {
+    const adminEmail = process.env.ADMIN_EMAIL || 'admin@gmail.com';
+    const adminPassword = process.env.ADMIN_PASSWORD || 'admin1234';
+    const existing = await prisma.user.findUnique({ where: { email: adminEmail } });
+    if (!existing) {
+      await prisma.user.create({
+        data: {
+          email: adminEmail,
+          passwordHash: hashPassword(adminPassword),
+          role: 'ADMIN',
+          name: 'Admin',
+          city: 'Delhi',
+          state: 'Delhi',
+          gender: 'Men'
+        }
+      });
+      console.log(`[Admin Seeded] ${adminEmail}`);
+    }
+  } catch (e) {
+    console.error('[Admin Seed Error]', e);
+  }
+}
+
 app.get('/', (req, res) => res.json({ message: 'Bharat AI Backend running!' }));
 
 const FESTIVALS_2026 = [
@@ -85,7 +110,6 @@ function getUpcomingFestival(stateName, today = new Date()) {
 
   const daysLeft = Math.ceil((upcoming[0].parsedDate.getTime() - today.getTime()) / 86400000);
 
-  // Show only if within 45 days
   if (daysLeft <= 45) {
     return { name: upcoming[0].name, daysLeft, tags: upcoming[0].tags };
   }
@@ -97,6 +121,7 @@ app.get('/api/cities', async (req, res) => {
   res.json([]);
 });
 
+// ─── Auth Routes ──────────────────────────────────────────────────────────────
 app.post('/api/auth/register', async (req, res) => {
   const { 
     email, password, role, name, city, state, gender, 
@@ -150,7 +175,11 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    const payload = { id: user.id, email: user.email, role: user.role, gender: user.gender, city: user.city, state: user.state, name: user.name, pincode: user.pincode };
+    if (user.isBlocked && user.role === 'SELLER') {
+      return res.status(403).json({ error: 'Your seller account has been blocked by admin due to excessive complaints. Please contact support.' });
+    }
+
+    const payload = { id: user.id, email: user.email, role: user.role, gender: user.gender, city: user.city, state: user.state, name: user.name, pincode: user.pincode, isBlocked: user.isBlocked };
     const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
     const { passwordHash: _, ...u } = user;
     res.json({ user: u, token });
@@ -161,7 +190,9 @@ app.post('/api/auth/login', async (req, res) => {
 
 app.get('/api/auth/me', authenticateToken, async (req, res) => {
   const user = await prisma.user.findUnique({ where: { id: req.user.id } });
-  res.json({ user });
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  const { passwordHash: _, ...u } = user;
+  res.json({ user: u });
 });
 
 app.put('/api/auth/profile', authenticateToken, async (req, res) => {
@@ -176,18 +207,18 @@ app.put('/api/auth/profile', authenticateToken, async (req, res) => {
   }
 });
 
+// ─── Homepage Shelves ─────────────────────────────────────────────────────────
 app.get('/api/homepage/shelves', async (req, res) => {
   try {
     const { city, state, gender, maxPrice, pincode } = req.query;
     const resolvedCity = city || 'Coimbatore';
     const resolvedState = state || 'Tamil Nadu';
-    const targetGender = gender || 'Men'; // Default for demo
+    const targetGender = gender || 'Men';
     const budget = parseFloat(maxPrice) || 2000;
 
-    let climate = 'Hot'; // Fallback
+    let climate = 'Hot';
     let temperature = 30;
     try {
-      // 1. Geocoding
       let geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(resolvedCity)}&count=1`, {
         signal: AbortSignal.timeout(5000)
       });
@@ -196,7 +227,6 @@ app.get('/api/homepage/shelves', async (req, res) => {
         let lat = geoData.results[0].latitude;
         let lon = geoData.results[0].longitude;
 
-        // 2. Weather
         let weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`, {
           signal: AbortSignal.timeout(5000)
         });
@@ -205,18 +235,73 @@ app.get('/api/homepage/shelves', async (req, res) => {
           temperature = weatherData.current_weather.temperature;
           if (temperature < 20) climate = 'Cold';
           else if (temperature > 28) climate = 'Hot';
-          else climate = 'Rainy'; // Just fallback mapping
+          else climate = 'Rainy';
         }
       }
     } catch (e) {
       console.error('Weather fetch failed', e);
     }
 
-    // Weather Logic Builder
+    // ── LOCAL SELLER SHELF (3-Tier: City → Neighboring → State, Sellers Only) ──
+    let localPicks = [];
+    let localTier = 'none'; // Track which tier we're at
+
+    const sellerBaseWhere = {
+      source: 'seller',
+      status: 'Active',
+      img: { not: '-' }
+    };
+
+    // Tier 1: Exact City match
+    localPicks = await prisma.product.findMany({
+      where: {
+        ...sellerBaseWhere,
+        city: { equals: resolvedCity, mode: 'insensitive' }
+      },
+      orderBy: [{ rating: 'desc' }],
+      take: 15
+    });
+    if (localPicks.length > 0) localTier = 'city';
+
+    // Tier 2: Pincode prefix (neighboring cities / district)
+    if (localPicks.length < 5 && pincode && pincode.length === 6) {
+      const prefix = pincode.substring(0, 3);
+      const neighborPicks = await prisma.product.findMany({
+        where: {
+          ...sellerBaseWhere,
+          pincode: { startsWith: prefix },
+          id: { notIn: localPicks.map(p => p.id) }
+        },
+        orderBy: [{ rating: 'desc' }],
+        take: 15 - localPicks.length
+      });
+      localPicks.push(...neighborPicks);
+      if (localPicks.length > 0) localTier = 'district';
+    }
+
+    // Tier 3: Entire state
+    if (localPicks.length < 5) {
+      const statePicks = await prisma.product.findMany({
+        where: {
+          ...sellerBaseWhere,
+          state: { equals: resolvedState, mode: 'insensitive' },
+          id: { notIn: localPicks.map(p => p.id) }
+        },
+        orderBy: [{ rating: 'desc' }],
+        take: 15 - localPicks.length
+      });
+      localPicks.push(...statePicks);
+      if (localPicks.length > 0 && localTier === 'none') localTier = 'state';
+    }
+
+    const hasLocalSellers = localPicks.length > 0;
+
+    // ── WEATHER PICKS ─────────────────────────────────────────────────────────
     let weatherWhere = {
       climate: climate,
       gender: { contains: targetGender, mode: 'insensitive' },
       img: { not: '-' },
+      status: 'Active',
       NOT: {
         OR: [
           { name: { contains: 'party', mode: 'insensitive' } },
@@ -229,7 +314,6 @@ app.get('/api/homepage/shelves', async (req, res) => {
       }
     };
 
-    // Explicit overrides for higher relevance based on climate
     if (climate === 'Hot') {
       weatherWhere.OR = [
         { material: { contains: 'Cotton', mode: 'insensitive' } },
@@ -257,94 +341,34 @@ app.get('/api/homepage/shelves', async (req, res) => {
       ];
     }
 
-    // Weather Picks (Prioritize Local City)
     const weatherPicks = await prisma.product.findMany({
       where: { ...weatherWhere, city: { equals: resolvedCity, mode: 'insensitive' } },
-      orderBy: [
-        { weather_priority: 'desc' },
-        { rating: 'desc' }
-      ],
+      orderBy: [{ weather_priority: 'desc' }, { rating: 'desc' }],
       take: 15
     });
-    
-    // If we didn't find enough local weather items, fallback to national
+
     if (weatherPicks.length < 5) {
-        const nationalWeather = await prisma.product.findMany({
-          where: weatherWhere,
-          orderBy: [
-            { weather_priority: 'desc' },
-            { rating: 'desc' }
-          ],
-          take: 15
-        });
-        weatherPicks.push(...nationalWeather.filter(nw => !weatherPicks.find(wp => wp.id === nw.id)));
-    }
-
-    // Dedicated Local Shelf Engine (3-Tier Pincode Matching)
-    let localPicks = [];
-
-    if (pincode && pincode.length === 6) {
-      // Tier 1: Exact Pincode
-      localPicks = await prisma.product.findMany({
-        where: {
-          pincode: pincode,
-          gender: { contains: targetGender, mode: 'insensitive' },
-          img: { not: '-' }
-        },
-        orderBy: [{ rating: 'desc' }],
+      const nationalWeather = await prisma.product.findMany({
+        where: weatherWhere,
+        orderBy: [{ weather_priority: 'desc' }, { rating: 'desc' }],
         take: 15
       });
-      
-      // Tier 2: 3-Digit District Prefix
-      if (localPicks.length < 15) {
-        const prefix = pincode.substring(0, 3);
-        const districtPicks = await prisma.product.findMany({
-          where: {
-            pincode: { startsWith: prefix },
-            gender: { contains: targetGender, mode: 'insensitive' },
-            img: { not: '-' },
-            id: { notIn: localPicks.map(p => p.id) }
-          },
-          orderBy: [{ rating: 'desc' }],
-          take: 15 - localPicks.length
-        });
-        localPicks.push(...districtPicks);
-      }
+      weatherPicks.push(...nationalWeather.filter(nw => !weatherPicks.find(wp => wp.id === nw.id)));
     }
 
-    // Tier 3: State-Level or Exact City Fallback
-    if (localPicks.length < 15) {
-      const cityPicks = await prisma.product.findMany({
-        where: {
-          OR: [
-            { city: { equals: resolvedCity, mode: 'insensitive' } },
-            { state: { equals: resolvedState, mode: 'insensitive' } }
-          ],
-          gender: { contains: targetGender, mode: 'insensitive' },
-          img: { not: '-' },
-          id: { notIn: localPicks.map(p => p.id) }
-        },
-        orderBy: [{ rating: 'desc' }],
-        take: 15 - localPicks.length
-      });
-      localPicks.push(...cityPicks);
-    }
-
-    // Budget Picks
+    // ── BUDGET PICKS ──────────────────────────────────────────────────────────
     const budgetPicks = await prisma.product.findMany({
       where: {
         price: { lte: budget },
         gender: { contains: targetGender, mode: 'insensitive' },
-        img: { not: '-' }
+        img: { not: '-' },
+        status: 'Active'
       },
-      orderBy: [
-        { rating: 'desc' },
-        { ratingTotal: 'desc' }
-      ],
+      orderBy: [{ rating: 'desc' }, { ratingTotal: 'desc' }],
       take: 15
     });
 
-    // Festival Picks logic - nearest upcoming festival
+    // ── FESTIVAL PICKS ────────────────────────────────────────────────────────
     const activeFestival = getUpcomingFestival(resolvedState);
     let festivalPicks = [];
 
@@ -361,23 +385,25 @@ app.get('/api/homepage/shelves', async (req, res) => {
         where: {
           OR: orConditions,
           gender: { contains: targetGender, mode: 'insensitive' },
-          img: { not: '-' }
+          img: { not: '-' },
+          status: 'Active'
         },
         orderBy: { rating: 'desc' },
         take: 15
       });
     }
 
-    // Verified Picks (Bayesian logic)
+    // ── VERIFIED PICKS (Bayesian) ─────────────────────────────────────────────
     const verifiedPicks = await prisma.product.findMany({
       where: {
         price: { lte: budget },
         gender: { contains: targetGender, mode: 'insensitive' },
-        img: { not: '-' }
+        img: { not: '-' },
+        status: 'Active'
       },
       take: 100
     });
-    
+
     const m = 50;
     const C = 4.0;
     const scoredVerified = verifiedPicks.map(p => {
@@ -387,11 +413,9 @@ app.get('/api/homepage/shelves', async (req, res) => {
       return { ...p, bayesianScore };
     }).sort((a, b) => b.bayesianScore - a.bayesianScore).slice(0, 15);
 
-    // Trending Around You (State-wise purchases)
+    // ── TRENDING ──────────────────────────────────────────────────────────────
     const recentPurchases = await prisma.purchase.findMany({
-      where: {
-        stateName: resolvedState
-      },
+      where: { stateName: resolvedState },
       include: { Product: true },
       take: 1000
     });
@@ -410,24 +434,50 @@ app.get('/api/homepage/shelves', async (req, res) => {
     let trendingPicks = [];
     if (trendingProductIds.length > 0) {
       trendingPicks = await prisma.product.findMany({
-        where: { 
-          id: { in: trendingProductIds },
-          img: { not: '-' }
-        }
+        where: { id: { in: trendingProductIds }, img: { not: '-' }, status: 'Active' }
       });
-      // Reorder to match trending sort
       trendingPicks = trendingPicks.sort((a, b) => productCounts[b.id] - productCounts[a.id]);
     }
 
-    // Build Dynamic Shelves Array
+    // ── NATIONAL CATALOG FALLBACK (when no local sellers) ────────────────────
+    // Used only when localPicks is empty
+    let nationalCatalogFallback = [];
+    if (!hasLocalSellers) {
+      nationalCatalogFallback = await prisma.product.findMany({
+        where: {
+          gender: { contains: targetGender, mode: 'insensitive' },
+          img: { not: '-' },
+          status: 'Active',
+          source: 'imported'
+        },
+        orderBy: [{ rating: 'desc' }, { ratingTotal: 'desc' }],
+        take: 15
+      });
+    }
+
+    // ── BUILD SHELVES ─────────────────────────────────────────────────────────
     const dynamicShelves = [];
 
-    // 0. Local Storefronts
-    if (localPicks.length > 0) {
+    // 0. Local Boutiques — only real local sellers
+    if (hasLocalSellers) {
+      let localTitle = `🏪 Local Boutiques in ${resolvedCity}`;
+      if (localTier === 'district') localTitle = `🏪 Local Boutiques Near ${resolvedCity}`;
+      if (localTier === 'state') localTitle = `🏪 Local Boutiques in ${resolvedState}`;
+
       dynamicShelves.push({
-        title: `🏪 Local Boutiques in ${resolvedCity}`,
+        title: localTitle,
         type: 'local',
-        products: localPicks.map(p => ({ ...p, reason: `✓ Ships locally from ${resolvedCity}` }))
+        isLocalSeller: true,
+        products: localPicks.map(p => ({ ...p, reason: `✓ Ships locally from ${p.city || resolvedCity}` }))
+      });
+    } else {
+      // No local sellers — show national catalog without "ships locally" label
+      dynamicShelves.push({
+        title: `🏪 Explore Products`,
+        type: 'local',
+        isLocalSeller: false,
+        noLocalSellers: true,
+        products: nationalCatalogFallback.map(p => ({ ...p, reason: null }))
       });
     }
 
@@ -458,7 +508,7 @@ app.get('/api/homepage/shelves', async (req, res) => {
       });
     }
 
-    // 4. Verified Picks For You
+    // 4. Verified Picks
     if (scoredVerified.length > 0) {
       dynamicShelves.push({
         title: `⭐ Verified Picks For You`,
@@ -499,12 +549,10 @@ app.get('/api/homepage/budget-picks', async (req, res) => {
     const budgetPicks = await prisma.product.findMany({
       where: {
         price: { lte: budget },
-        gender: { contains: targetGender, mode: 'insensitive' }
+        gender: { contains: targetGender, mode: 'insensitive' },
+        status: 'Active'
       },
-      orderBy: [
-        { rating: 'desc' },
-        { ratingTotal: 'desc' }
-      ],
+      orderBy: [{ rating: 'desc' }, { ratingTotal: 'desc' }],
       take: 15
     });
 
@@ -515,7 +563,7 @@ app.get('/api/homepage/budget-picks', async (req, res) => {
   }
 });
 
-
+// ─── Seller Routes ────────────────────────────────────────────────────────────
 app.get('/api/seller/dashboard', authenticateToken, requireRole('SELLER'), async (req, res) => {
   try {
     const { city, state } = req.user;
@@ -548,7 +596,7 @@ app.get('/api/seller/dashboard', authenticateToken, requireRole('SELLER'), async
         gapScore = 100;
       } else {
         const ratio = searchVolume / supplyCount;
-        gapScore = Math.min(Math.round((ratio / 10) * 100), 100); 
+        gapScore = Math.min(Math.round((ratio / 10) * 100), 100);
       }
 
       return {
@@ -556,16 +604,13 @@ app.get('/api/seller/dashboard', authenticateToken, requireRole('SELLER'), async
         searchVolume,
         availableProducts: supplyCount,
         gapScore,
-        recommendation: gapScore > 75 
+        recommendation: gapScore > 75
           ? `High demand for '${keyword}' detected in ${city} with critical supply shortage. Add stock immediately!`
           : `Market is saturated with '${keyword}'. Compete on price or add unique variations.`
       };
     }));
 
-    res.json({
-      sellerRegion: { city, state },
-      marketInsights
-    });
+    res.json({ sellerRegion: { city, state }, marketInsights });
   } catch (error) {
     console.error('Seller dashboard error:', error);
     res.status(500).json({ error: 'Failed to generate insights' });
@@ -578,7 +623,6 @@ app.get('/api/seller/products', authenticateToken, requireRole('SELLER'), async 
       where: { sellerId: req.user.id },
       orderBy: { id: 'desc' }
     });
-    // Transform img -> images string array for the frontend Seller Dashboard requirement to remain seamlessly compatible
     const mapped = products.map(p => ({ ...p, images: p.img, description: p.purl }));
     res.json({ products: mapped });
   } catch (error) {
@@ -590,21 +634,17 @@ app.get('/api/seller/products', authenticateToken, requireRole('SELLER'), async 
 app.post('/api/seller/products', authenticateToken, requireRole('SELLER'), upload.array('images', 5), async (req, res) => {
   try {
     const { name, description, price, mrp, stock, gender, category, material, occasion } = req.body;
-    
-    // Auto Enrichment Layer
+
     const nameStr = name.toLowerCase();
-    
-    // Default to strict heuristics
     let macroCategory = enrichment.extractMacroCategory(nameStr, category);
     let season = enrichment.extractSeason(nameStr, category, material);
     let climate = enrichment.extractClimate(nameStr, category, material);
     let finalOccasion = occasion || enrichment.extractOccasion(nameStr, category);
     const priceSegment = enrichment.computePriceSegment(parseFloat(price) || 0);
 
-    // LLM Extraction Pipeline
     try {
       const llmResult = await llmEnrichment.extractIntelligence(
-        { name, description, category, material }, 
+        { name, description, category, material },
         { city: req.user.city, state: req.user.state }
       );
       if (llmResult) {
@@ -617,20 +657,19 @@ app.post('/api/seller/products', authenticateToken, requireRole('SELLER'), uploa
       console.warn("LLM Overfailing securely to heuristic bounds:", llmErr);
     }
 
-    // Save image paths array from Cloudinary
     const imagePaths = req.files ? req.files.map(f => f.path).join(';') : '';
 
     const product = await prisma.product.create({
       data: {
-        id: 'seller_' + Date.now().toString(), // Mocks legacy string ID natively
+        id: 'seller_' + Date.now().toString(),
         sellerId: req.user.id,
         name,
-        purl: description || '', // Storing raw description securely in legacy format
+        purl: description || '',
         price: parseFloat(price) || 0,
         mrp: parseFloat(mrp) || 0,
-        img: imagePaths, // Saving Cloudinary block directly into legacy visual stream
-        asin: req.user.businessName, 
-        rating: 0, 
+        img: imagePaths,
+        asin: req.user.businessName,
+        rating: 0,
         ratingTotal: 0,
         gender,
         category,
@@ -643,15 +682,15 @@ app.post('/api/seller/products', authenticateToken, requireRole('SELLER'), uploa
         city: req.user.city,
         state: req.user.state,
         pincode: req.user.pincode,
-        status: 'Active',
+        status: 'Pending',   // Requires admin approval
         source: 'seller',
         remainingStock: parseInt(stock, 10) || 50,
-        weather_priority: 999, // Force boost above automated catalog
+        weather_priority: 999,
         festival_priority: 999
       }
     });
 
-    res.json({ message: 'Product created successfully', product });
+    res.json({ message: 'Product submitted for admin approval', product });
   } catch (error) {
     console.error('Error creating product:', error);
     res.status(500).json({ error: 'Failed to create product' });
@@ -661,8 +700,6 @@ app.post('/api/seller/products', authenticateToken, requireRole('SELLER'), uploa
 app.post('/api/seller/category-request', authenticateToken, requireRole('SELLER'), upload.single('sampleImage'), async (req, res) => {
   try {
     const { categoryName, gender, isSeasonal, origin, description } = req.body;
-    
-    // Attempt extracting cloudinary image URL safely
     let sampleImageUrl = null;
     if (req.file && req.file.path) {
       sampleImageUrl = req.file.path;
@@ -703,15 +740,49 @@ app.get('/api/seller/category-requests', authenticateToken, requireRole('SELLER'
 app.delete('/api/seller/products/:id', authenticateToken, requireRole('SELLER'), async (req, res) => {
   try {
     await prisma.product.deleteMany({
-      where: {
-        id: req.params.id,
-        sellerId: req.user.id 
-      }
+      where: { id: req.params.id, sellerId: req.user.id }
     });
     res.json({ message: 'Product deleted successfully' });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Failed to delete product' });
+  }
+});
+
+// Seller Feedback: complaints received + warnings from admin
+app.get('/api/seller/feedback', authenticateToken, requireRole('SELLER'), async (req, res) => {
+  try {
+    const sellerId = req.user.id;
+
+    // Get all seller product IDs
+    const sellerProducts = await prisma.product.findMany({
+      where: { sellerId },
+      select: { id: true, name: true }
+    });
+    const productIds = sellerProducts.map(p => p.id);
+
+    // Get all reviews/complaints for seller products
+    const reviews = await prisma.review.findMany({
+      where: { productId: { in: productIds } },
+      include: { User: { select: { name: true, city: true } }, Product: { select: { name: true } } },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    // Get admin warnings
+    const warnings = await prisma.sellerWarning.findMany({
+      where: { sellerId },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    // Stats
+    const totalReviews = reviews.length;
+    const complaints = reviews.filter(r => r.isComplaint).length;
+    const complaintRatio = totalReviews > 0 ? Math.round((complaints / totalReviews) * 100) : 0;
+
+    res.json({ reviews, warnings, stats: { totalReviews, complaints, complaintRatio } });
+  } catch (error) {
+    console.error('Seller feedback error:', error);
+    res.status(500).json({ error: 'Failed to load feedback' });
   }
 });
 
@@ -750,23 +821,19 @@ app.get('/api/seller/analytics', authenticateToken, requireRole('SELLER'), async
       totalOrders: productDemand.reduce((sum, p) => sum + p.orderCount, 0),
     };
 
-    // Category Pie Chart Aggregation
     const categoryMap = new Map();
     productDemand.forEach(p => {
       if (p.unitsSold > 0) {
         let cat = p.category;
-        // Clean up empty or 'NA' categories
         if (!cat || cat.toUpperCase() === 'NA') cat = 'Other';
         categoryMap.set(cat, (categoryMap.get(cat) || 0) + p.unitsSold);
       }
     });
-    
-    // Sort so largest categories are first
+
     const categoryBreakdown = Array.from(categoryMap.entries())
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
 
-    // Demand trend over 14 days
     const since = new Date();
     since.setDate(since.getDate() - 14);
 
@@ -788,7 +855,6 @@ app.get('/api/seller/analytics', authenticateToken, requireRole('SELLER'), async
     }
     const trend = Array.from(buckets.entries()).map(([date, units]) => ({ date, units }));
 
-    // Low stock alert (threshold 5)
     const lowStock = productDemand
       .filter(p => p.remainingStock <= 5 && p.unitsSold > 0)
       .sort((a, b) => a.remainingStock - b.remainingStock);
@@ -800,7 +866,8 @@ app.get('/api/seller/analytics', authenticateToken, requireRole('SELLER'), async
   }
 });
 
-app.post('/api/purchase', async (req, res) => {
+// ─── Purchase Route ───────────────────────────────────────────────────────────
+app.post('/api/purchase', authenticateToken, async (req, res) => {
   try {
     const { productId, quantity = 1, cityName, stateName } = req.body;
 
@@ -823,6 +890,7 @@ app.post('/api/purchase', async (req, res) => {
         data: {
           productId,
           sellerId: product.sellerId,
+          userId: req.user?.id || null,
           quantity,
           priceAtPurchase: product.price,
           cityName,
@@ -845,6 +913,270 @@ app.post('/api/purchase', async (req, res) => {
   }
 });
 
+// ─── My Purchases (Customer Profile) ─────────────────────────────────────────
+app.get('/api/purchases/my', authenticateToken, async (req, res) => {
+  try {
+    const purchases = await prisma.purchase.findMany({
+      where: { userId: req.user.id },
+      include: {
+        Product: true,
+        Reviews: { where: { userId: req.user.id } }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json({ purchases });
+  } catch (error) {
+    console.error('My purchases error:', error);
+    res.status(500).json({ error: 'Failed to load purchases' });
+  }
+});
+
+// ─── Reviews ──────────────────────────────────────────────────────────────────
+app.post('/api/reviews', authenticateToken, async (req, res) => {
+  try {
+    const { productId, purchaseId, rating, comment, isComplaint } = req.body;
+
+    if (!productId || !purchaseId || !comment) {
+      return res.status(400).json({ error: 'productId, purchaseId and comment are required' });
+    }
+
+    // Verify this purchase belongs to the user
+    const purchase = await prisma.purchase.findFirst({
+      where: { id: purchaseId, userId: req.user.id, productId }
+    });
+    if (!purchase) {
+      return res.status(403).json({ error: 'You can only review products you have purchased' });
+    }
+
+    // Check for existing review
+    const existing = await prisma.review.findFirst({
+      where: { userId: req.user.id, purchaseId }
+    });
+    if (existing) {
+      return res.status(400).json({ error: 'You have already reviewed this purchase' });
+    }
+
+    const review = await prisma.review.create({
+      data: {
+        userId: req.user.id,
+        productId,
+        purchaseId,
+        rating: parseInt(rating) || 5,
+        comment,
+        isComplaint: isComplaint || false
+      }
+    });
+
+    res.json({ message: 'Review submitted', review });
+  } catch (error) {
+    console.error('Review error:', error);
+    res.status(500).json({ error: 'Failed to submit review' });
+  }
+});
+
+app.get('/api/reviews/product/:productId', async (req, res) => {
+  try {
+    const reviews = await prisma.review.findMany({
+      where: { productId: req.params.productId },
+      include: { User: { select: { name: true, city: true } } },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json({ reviews });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch reviews' });
+  }
+});
+
+app.get('/api/reviews/my', authenticateToken, async (req, res) => {
+  try {
+    const reviews = await prisma.review.findMany({
+      where: { userId: req.user.id },
+      include: { Product: { select: { name: true, img: true } } },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json({ reviews });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch reviews' });
+  }
+});
+
+// ─── Admin Routes ─────────────────────────────────────────────────────────────
+// Middleware for admin
+function requireAdmin(req, res, next) {
+  if (!req.user || req.user.role !== 'ADMIN') {
+    return res.status(403).json({ error: 'Requires ADMIN role' });
+  }
+  next();
+}
+
+// Pending products
+app.get('/api/admin/products/pending', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const products = await prisma.product.findMany({
+      where: { status: 'Pending', source: 'seller' },
+      include: { Seller: { select: { name: true, email: true, city: true, businessName: true } } },
+      orderBy: { id: 'desc' }
+    });
+    res.json({ products });
+  } catch (error) {
+    console.error('Admin pending products error:', error);
+    res.status(500).json({ error: 'Failed to fetch pending products' });
+  }
+});
+
+// Approve product
+app.post('/api/admin/products/:id/approve', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const product = await prisma.product.update({
+      where: { id: req.params.id },
+      data: { status: 'Active' }
+    });
+    res.json({ message: 'Product approved', product });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to approve product' });
+  }
+});
+
+// Reject product
+app.post('/api/admin/products/:id/reject', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const product = await prisma.product.update({
+      where: { id: req.params.id },
+      data: { status: 'Rejected' }
+    });
+    res.json({ message: 'Product rejected', product });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to reject product' });
+  }
+});
+
+// All sellers with complaint stats
+app.get('/api/admin/sellers', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const sellers = await prisma.user.findMany({
+      where: { role: 'SELLER' },
+      select: {
+        id: true, name: true, email: true, city: true, state: true,
+        businessName: true, isBlocked: true,
+        Products: { select: { id: true } },
+        WarningsReceived: { select: { id: true, type: true, message: true, createdAt: true } }
+      }
+    });
+
+    const sellersWithStats = await Promise.all(sellers.map(async (seller) => {
+      const productIds = seller.Products.map(p => p.id);
+      const totalReviews = await prisma.review.count({ where: { productId: { in: productIds } } });
+      const complaints = await prisma.review.count({ where: { productId: { in: productIds }, isComplaint: true } });
+      const complaintRatio = totalReviews > 0 ? Math.round((complaints / totalReviews) * 100) : 0;
+      const warningCount = seller.WarningsReceived.filter(w => w.type === 'WARNING').length;
+
+      return {
+        ...seller,
+        totalProducts: seller.Products.length,
+        totalReviews,
+        complaints,
+        complaintRatio,
+        warningCount,
+        canWarn: totalReviews >= 5 && complaintRatio > 20 && warningCount < 2 && !seller.isBlocked,
+        canBlock: totalReviews >= 5 && complaintRatio > 40 && !seller.isBlocked
+      };
+    }));
+
+    res.json({ sellers: sellersWithStats });
+  } catch (error) {
+    console.error('Admin sellers error:', error);
+    res.status(500).json({ error: 'Failed to fetch sellers' });
+  }
+});
+
+// Send warning to seller
+app.post('/api/admin/sellers/:id/warn', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { message } = req.body;
+    const sellerId = req.params.id;
+
+    // Check warning count
+    const warningCount = await prisma.sellerWarning.count({
+      where: { sellerId, type: 'WARNING' }
+    });
+    if (warningCount >= 2) {
+      return res.status(400).json({ error: 'Maximum 2 warnings already sent. Consider blocking the seller.' });
+    }
+
+    const warning = await prisma.sellerWarning.create({
+      data: {
+        sellerId,
+        adminId: req.user.id,
+        message: message || 'Your seller account has received excessive complaints from customers.',
+        type: 'WARNING'
+      }
+    });
+
+    res.json({ message: 'Warning sent', warning });
+  } catch (error) {
+    console.error('Warn seller error:', error);
+    res.status(500).json({ error: 'Failed to send warning' });
+  }
+});
+
+// Block seller
+app.post('/api/admin/sellers/:id/block', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { message } = req.body;
+    const sellerId = req.params.id;
+
+    await prisma.user.update({
+      where: { id: sellerId },
+      data: { isBlocked: true }
+    });
+
+    await prisma.sellerWarning.create({
+      data: {
+        sellerId,
+        adminId: req.user.id,
+        message: message || 'Your seller account has been blocked due to excessive complaints (>40% complaint rate).',
+        type: 'BLOCK'
+      }
+    });
+
+    res.json({ message: 'Seller blocked successfully' });
+  } catch (error) {
+    console.error('Block seller error:', error);
+    res.status(500).json({ error: 'Failed to block seller' });
+  }
+});
+
+// Unblock seller
+app.post('/api/admin/sellers/:id/unblock', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    await prisma.user.update({
+      where: { id: req.params.id },
+      data: { isBlocked: false }
+    });
+    res.json({ message: 'Seller unblocked' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to unblock seller' });
+  }
+});
+
+// All reviews (admin view)
+app.get('/api/admin/reviews', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const reviews = await prisma.review.findMany({
+      include: {
+        User: { select: { name: true, email: true } },
+        Product: { select: { name: true, sellerId: true, Seller: { select: { name: true } } } }
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 100
+    });
+    res.json({ reviews });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch reviews' });
+  }
+});
+
+// ─── Search Route ─────────────────────────────────────────────────────────────
 app.post('/api/search', authenticateToken, async (req, res) => {
   try {
     const { rawQuery, city, state } = req.body;
@@ -874,8 +1206,6 @@ app.post('/api/search', authenticateToken, async (req, res) => {
       where.price = { lte: Number(parsed.budget) };
     }
 
-    // category/type/colour don't have dedicated columns for all of them —
-    // fold whichever were extracted into a free-text OR search on name + category
     const freeTextTerms = [parsed.category, parsed.type, parsed.colour].filter(t => t && t !== "NA");
     if (freeTextTerms.length) {
       where.OR = freeTextTerms.flatMap(term => [
@@ -898,6 +1228,8 @@ app.post('/api/search', authenticateToken, async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
+// ─── Start Server ─────────────────────────────────────────────────────────────
+app.listen(PORT, async () => {
   console.log(`Server running on http://localhost:${PORT}`);
+  await seedAdmin();
 });

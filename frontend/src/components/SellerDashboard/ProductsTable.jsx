@@ -118,8 +118,16 @@ export default function ProductsTable({ refreshTrigger }) {
                   </div>
                 </td>
                 <td className="px-6 py-4">
-                  <span className="px-2 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded text-xs font-semibold">
-                    Approved
+                  <span className={`px-2 py-1 rounded text-xs font-semibold border ${
+                    product.status === 'Active'
+                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                      : product.status === 'Pending'
+                      ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                      : product.status === 'Rejected'
+                      ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                      : 'bg-slate-500/10 text-slate-400 border-slate-500/20'
+                  }`}>
+                    {product.status === 'Active' ? '✓ Approved' : product.status || 'Unknown'}
                   </span>
                 </td>
                 <td className="px-6 py-4 text-right">

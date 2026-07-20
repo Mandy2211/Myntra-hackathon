@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { ShoppingBag, MapPin, User as UserIcon, LogOut, Sun, CloudRain, ThermometerSnowflake, Search } from 'lucide-react';
+import { ShoppingBag, MapPin, User as UserIcon, LogOut, Sun, CloudRain, ThermometerSnowflake, Search, UserCircle } from 'lucide-react';
 import { fetchCities } from '../../services/api';
 import DynamicShelf from '../DynamicShelf';
 
@@ -340,6 +340,15 @@ export default function MainAppContent() {
                 <span className="text-[10px] text-purple-300 font-medium uppercase tracking-wider">{user?.role}</span>
               </div>
             </div>
+            {user?.role === 'CUSTOMER' && (
+              <button
+                onClick={() => navigate('/profile')}
+                className="p-2 bg-slate-800 hover:bg-purple-950/40 hover:text-purple-400 border border-slate-700 hover:border-purple-900/50 rounded-lg transition"
+                title="My Profile & Orders"
+              >
+                <UserCircle className="w-4 h-4" />
+              </button>
+            )}
             <button
               onClick={logout}
               className="p-2 bg-slate-800 hover:bg-rose-950/40 hover:text-rose-450 border border-slate-700 hover:border-rose-900/50 rounded-lg transition"
@@ -386,6 +395,9 @@ export default function MainAppContent() {
                 key={idx}
                 title={shelf.title}
                 products={shelf.products}
+                isLocalShelf={shelf.type === 'local'}
+                noLocalSellers={shelf.noLocalSellers}
+                isLocalSeller={shelf.isLocalSeller}
               />
             ))}
 
@@ -429,14 +441,18 @@ export default function MainAppContent() {
   );
 }
 
-const Shelf = ({ title, products }) => {
+const Shelf = ({ title, products, isLocalShelf = false, noLocalSellers = false, isLocalSeller = true }) => {
   const { user } = useAuth();
 
   const handleBuy = async (productId, cityName, stateName) => {
     try {
+      const token = sessionStorage.getItem('token');
       const res = await fetch("http://localhost:5000/api/purchase", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
         body: JSON.stringify({ productId, quantity: 1, cityName, stateName }),
       });
 
@@ -456,12 +472,23 @@ const Shelf = ({ title, products }) => {
 
   return (
     <div className="w-full">
-      <h3 className="text-2xl font-extrabold text-slate-100 mb-6 flex items-center gap-2">
+      <h3 className="text-2xl font-extrabold text-slate-100 mb-2 flex items-center gap-2">
         {title}
         <span className="text-xs font-medium bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full ml-2 border border-slate-700">
           {products.length} items
         </span>
       </h3>
+
+      {/* Working on connecting sellers message */}
+      {isLocalShelf && noLocalSellers && (
+        <div className="mb-4 bg-gradient-to-r from-purple-950/40 to-pink-950/40 border border-purple-900/40 rounded-xl px-4 py-3 flex items-center gap-3">
+          <span className="text-2xl">🏗️</span>
+          <div>
+            <p className="text-sm font-semibold text-purple-300">We are working on connecting you to your local seller</p>
+            <p className="text-xs text-slate-500 mt-0.5">Showing national catalog products in the meantime</p>
+          </div>
+        </div>
+      )}
       <div className="flex overflow-x-auto gap-4 pb-4 snap-x hide-scroll">
         {products.map(p => (
           <div key={p.id} className="snap-start shrink-0 w-[220px] bg-slate-900 border border-slate-800 rounded-xl overflow-hidden hover:border-pink-500/50 hover:shadow-lg hover:shadow-pink-900/10 transition-all duration-300 group">
@@ -483,7 +510,7 @@ const Shelf = ({ title, products }) => {
               )}
             </div>
             <div className="p-4 relative min-h-[140px] flex flex-col">
-              {p.reason && (
+              {p.reason && isLocalSeller && (
                 <div className="text-[10px] font-medium text-emerald-400 bg-emerald-950/30 border border-emerald-900/50 px-2 py-1 rounded-md mb-2 leading-tight">
                   {p.reason}
                 </div>

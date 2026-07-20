@@ -121,18 +121,66 @@ export default function SearchResults() {
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {products.map(p => (
-              <div key={p.id} className="bg-slate-900 rounded-xl overflow-hidden border border-slate-800 hover:border-slate-700 transition group cursor-pointer">
-                <div className="aspect-[3/4] overflow-hidden bg-slate-800">
-                  <img src={p.img || p.images?.[0]} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition duration-500" />
+              <div key={p.id} className="bg-slate-900 rounded-xl overflow-hidden border border-slate-800 hover:border-pink-500/40 hover:shadow-lg hover:shadow-pink-900/10 transition-all duration-300 group cursor-pointer flex flex-col">
+                <div className="relative aspect-[3/4] overflow-hidden bg-slate-800">
+                  <img
+                    src={p.img?.split(';')[0] || p.images?.[0]}
+                    alt={p.name}
+                    className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                    onError={e => { e.target.src = 'https://placehold.co/300x400/1e293b/ec4899?text=Bharat+AI' }}
+                  />
+                  {p.discount && p.discount !== '0' && p.discount !== '' && (
+                    <div className="absolute top-2 left-2 bg-rose-500 text-white text-[10px] font-bold px-2 py-1 rounded shadow-lg">
+                      {p.discount.includes('%') ? p.discount : p.discount + '%'} OFF
+                    </div>
+                  )}
+                  {p.rating > 0 && (
+                    <div className="absolute top-2 right-2 bg-slate-950/80 backdrop-blur-sm px-2 py-0.5 rounded text-[10px] font-bold text-amber-400 border border-slate-700/50">
+                      ⭐ {parseFloat(p.rating).toFixed(1)}
+                    </div>
+                  )}
                 </div>
-                <div className="p-4">
-                  <h3 className="font-medium text-slate-200 line-clamp-1">{p.name}</h3>
-                  <div className="flex items-center gap-2 mt-2">
-                    <span className="text-lg font-bold text-white">₹{p.price}</span>
+                <div className="p-4 flex flex-col flex-1">
+                  <p className="text-[10px] uppercase font-bold tracking-wider text-slate-400 mb-1">{p.seller || p.asin || 'Brand'}</p>
+                  <h3 className="font-medium text-slate-200 line-clamp-2 text-sm flex-1">{p.name}</h3>
+                  <div className="flex items-center gap-2 mt-3">
+                    <span className="text-lg font-bold text-emerald-400">₹{p.price}</span>
                     {p.mrp > p.price && (
                       <span className="text-sm text-slate-500 line-through">₹{p.mrp}</span>
                     )}
                   </div>
+                  <button
+                    disabled={p.remainingStock === 0}
+                    onClick={async () => {
+                      try {
+                        const token = sessionStorage.getItem('token');
+                        const res = await fetch('http://localhost:5000/api/purchase', {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                          },
+                          body: JSON.stringify({
+                            productId: p.id,
+                            quantity: 1,
+                            cityName: user?.city || 'Unknown',
+                            stateName: user?.state || 'Unknown'
+                          })
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                          alert(`✅ Order placed! ${data.remainingStock} left in stock.`);
+                        } else {
+                          alert(data.error || 'Purchase failed');
+                        }
+                      } catch (err) {
+                        alert('Purchase failed. Please try again.');
+                      }
+                    }}
+                    className="mt-3 w-full py-2 rounded-lg bg-pink-600 hover:bg-pink-500 text-white font-bold text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {p.remainingStock === 0 ? 'Out of Stock' : 'Buy'}
+                  </button>
                 </div>
               </div>
             ))}

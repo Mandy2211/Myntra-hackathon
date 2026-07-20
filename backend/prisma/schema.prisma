@@ -24,8 +24,14 @@ model User {
   yearsInBusiness Int?
   primaryProduct  String?
   pincode         String?
-  Products        Product[]
+  isBlocked       Boolean  @default(false)
+
+  Products         Product[]
   CategoryRequests CategoryRequest[]
+  Reviews          Review[]
+  Purchases        Purchase[]
+  WarningsSent     SellerWarning[] @relation("AdminWarnings")
+  WarningsReceived SellerWarning[] @relation("SellerWarnings")
 }
 
 
@@ -64,6 +70,34 @@ model Product {
   
   Seller            User?   @relation(fields: [sellerId], references: [id])
   Purchase          Purchase[]
+  Reviews           Review[]
+}
+
+model Review {
+  id          String   @id @default(uuid())
+  userId      String
+  productId   String
+  purchaseId  String
+  rating      Int      @default(5)
+  comment     String
+  isComplaint Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  User        User     @relation(fields: [userId], references: [id])
+  Product     Product  @relation(fields: [productId], references: [id])
+  Purchase    Purchase @relation(fields: [purchaseId], references: [id])
+}
+
+model SellerWarning {
+  id        String   @id @default(uuid())
+  sellerId  String
+  adminId   String
+  message   String
+  type      String   @default("WARNING")
+  createdAt DateTime @default(now())
+
+  Seller    User     @relation("SellerWarnings", fields: [sellerId], references: [id])
+  Admin     User     @relation("AdminWarnings", fields: [adminId], references: [id])
 }
 
 model SearchQuery {
@@ -85,12 +119,15 @@ model Purchase {
   id              String   @id @default(uuid())
   productId       String
   sellerId        String?
+  userId          String?
   quantity        Int      @default(1)
   priceAtPurchase Float    @default(0)
   cityName        String
   stateName       String   @default("Uttar Pradesh")
   createdAt       DateTime @default(now())
   Product         Product  @relation(fields: [productId], references: [id])
+  User            User?    @relation(fields: [userId], references: [id])
+  Reviews         Review[]
 }
 
 model CityContext {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { TrendingUp, AlertTriangle, CheckCircle, Search, Activity, Package, Plus, LayoutDashboard, LogOut, Lightbulb } from 'lucide-react';
+import { TrendingUp, AlertTriangle, CheckCircle, Search, Activity, Package, Plus, LayoutDashboard, LogOut, Lightbulb, MessageSquare, Star, Shield, Trash2, Clock, Ban } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import UploadForm from './UploadForm';
 import ProductsTable from './ProductsTable';
@@ -14,7 +14,7 @@ export default function SellerDashboard() {
   const [data, setData] = useState(null);
   
   // Navigation State
-  const [activeTab, setActiveTab] = useState('dashboard'); // dashboard | products | upload
+  const [activeTab, setActiveTab] = useState('dashboard'); // dashboard | products | upload | feedback
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
@@ -103,6 +103,12 @@ export default function SellerDashboard() {
             >
               <Lightbulb className="w-4 h-4" /> Suggest Category
             </button>
+            <button 
+              onClick={() => setActiveTab('feedback')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${activeTab === 'feedback' ? 'bg-gradient-to-r from-pink-600 to-purple-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'}`}
+            >
+              <MessageSquare className="w-4 h-4" /> Feedback & Alerts
+            </button>
           </nav>
           
           <button onClick={() => navigate('/')} className="block w-full text-center text-xs font-medium text-pink-400 hover:text-pink-300 mt-12 pt-4 pb-2 border-t border-slate-800">
@@ -175,6 +181,12 @@ export default function SellerDashboard() {
           {activeTab === 'request-category' && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-4xl">
                <CategoryRequestForm />
+            </div>
+          )}
+
+          {activeTab === 'feedback' && (
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+               <FeedbackTab />
             </div>
           )}
 
@@ -337,6 +349,213 @@ function AnalyticsTab() {
             )}
           </tbody>
         </table>
+      </div>
+    </div>
+  );
+}
+
+function FeedbackTab() {
+  const { token } = useAuth();
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [products, setProducts] = useState([]);
+  const [deleteLoading, setDeleteLoading] = useState(null);
+
+  const fetchFeedback = async () => {
+    setLoading(true);
+    try {
+      const headers = { 'Authorization': `Bearer ${token}` };
+      const [fbRes, prodRes] = await Promise.all([
+        fetch('http://localhost:5000/api/seller/feedback', { headers }),
+        fetch('http://localhost:5000/api/seller/products', { headers })
+      ]);
+      const fbData = await fbRes.json();
+      const prodData = await prodRes.json();
+      setData(fbData);
+      setProducts(prodData.products || []);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchFeedback(); }, [token]);
+
+  const deleteProduct = async (id) => {
+    if (!window.confirm('Delete this product? This cannot be undone.')) return;
+    setDeleteLoading(id);
+    try {
+      await fetch(`http://localhost:5000/api/seller/products/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      setProducts(prev => prev.filter(p => p.id !== id));
+    } catch (err) {
+      alert('Failed to delete product');
+    } finally {
+      setDeleteLoading(null);
+    }
+  };
+
+  if (loading) return <div className="text-slate-400 text-center py-12">Loading feedback...</div>;
+
+  const warnings = data?.warnings || [];
+  const reviews = data?.reviews || [];
+  const stats = data?.stats || {};
+  const complaints = reviews.filter(r => r.isComplaint);
+  const isBlocked = warnings.some(w => w.type === 'BLOCK');
+
+  return (
+    <div className="space-y-8">
+      <header>
+        <h2 className="text-2xl font-bold flex items-center gap-2">
+          <MessageSquare className="text-pink-500" /> Feedback & Alerts
+        </h2>
+        <p className="text-sm text-slate-400 mt-1">Customer reviews, complaints, and admin messages for your account.</p>
+      </header>
+
+      {/* Block Banner */}
+      {isBlocked && (
+        <div className="bg-red-950/50 border border-red-900 rounded-2xl p-5 flex items-start gap-4">
+          <Ban className="w-6 h-6 text-red-400 shrink-0 mt-0.5" />
+          <div>
+            <h3 className="font-bold text-red-300 text-lg">Account Blocked</h3>
+            <p className="text-red-400/80 text-sm mt-1">Your seller account has been blocked by admin. Please contact support to resolve this.</p>
+          </div>
+        </div>
+      )}
+
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-4">
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 text-center">
+          <div className="text-2xl font-black text-white">{stats.totalReviews || 0}</div>
+          <div className="text-xs text-slate-400 uppercase tracking-wider mt-1">Total Reviews</div>
+        </div>
+        <div className="bg-slate-900 border border-red-900/30 rounded-2xl p-4 text-center">
+          <div className="text-2xl font-black text-red-400">{stats.complaints || 0}</div>
+          <div className="text-xs text-slate-400 uppercase tracking-wider mt-1">Complaints</div>
+        </div>
+        <div className={`bg-slate-900 border rounded-2xl p-4 text-center ${
+          (stats.complaintRatio || 0) > 40 ? 'border-red-900/50' : (stats.complaintRatio || 0) > 20 ? 'border-amber-900/50' : 'border-emerald-900/30'
+        }`}>
+          <div className={`text-2xl font-black ${
+            (stats.complaintRatio || 0) > 40 ? 'text-red-400' : (stats.complaintRatio || 0) > 20 ? 'text-amber-400' : 'text-emerald-400'
+          }`}>{stats.complaintRatio || 0}%</div>
+          <div className="text-xs text-slate-400 uppercase tracking-wider mt-1">Complaint Rate</div>
+        </div>
+      </div>
+
+      {/* Admin Warnings */}
+      {warnings.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-lg font-bold text-slate-200 flex items-center gap-2">
+            <Shield className="w-5 h-5 text-amber-400" /> Admin Messages
+          </h3>
+          {warnings.map(w => (
+            <div key={w.id} className={`border rounded-xl p-4 flex items-start gap-3 ${
+              w.type === 'BLOCK'
+                ? 'bg-red-950/30 border-red-900/50'
+                : 'bg-amber-950/30 border-amber-900/50'
+            }`}>
+              {w.type === 'BLOCK'
+                ? <Ban className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+                : <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />}
+              <div className="flex-1">
+                <div className={`font-bold text-sm ${w.type === 'BLOCK' ? 'text-red-300' : 'text-amber-300'}`}>
+                  {w.type === 'BLOCK' ? '🚫 Account Block Notice' : '⚠️ Warning from Admin'}
+                </div>
+                <p className={`text-sm mt-1 ${w.type === 'BLOCK' ? 'text-red-400/80' : 'text-amber-400/80'}`}>{w.message}</p>
+                <p className="text-xs text-slate-600 mt-1">{new Date(w.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Products with Delete Option */}
+      <div className="space-y-3">
+        <h3 className="text-lg font-bold text-slate-200 flex items-center gap-2">
+          <Package className="w-5 h-5 text-purple-400" /> Your Products
+          <span className="text-xs font-normal text-slate-500 ml-1">(manage & delete)</span>
+        </h3>
+        {products.length === 0 ? (
+          <p className="text-slate-500 text-sm">No products uploaded yet.</p>
+        ) : products.map(p => (
+          <div key={p.id} className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex items-center gap-4 hover:border-pink-500/20 transition">
+            <div className="w-12 h-12 rounded-lg overflow-hidden bg-slate-800 shrink-0">
+              <img src={p.img?.split(';')[0]} alt={p.name}
+                className="w-full h-full object-cover"
+                onError={e => { e.target.src = 'https://placehold.co/50x50/1e293b/ec4899?text=?' }}
+              />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h4 className="font-semibold text-slate-200 text-sm line-clamp-1">{p.name}</h4>
+              <div className="flex gap-3 items-center mt-1">
+                <span className="text-xs text-emerald-400 font-bold">₹{p.price}</span>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                  p.status === 'Active' ? 'bg-emerald-950/50 border-emerald-900/50 text-emerald-400'
+                  : p.status === 'Pending' ? 'bg-amber-950/50 border-amber-900/50 text-amber-400'
+                  : 'bg-red-950/50 border-red-900/50 text-red-400'
+                }`}>
+                  {p.status === 'Pending' && <Clock className="w-2.5 h-2.5 inline mr-1" />}
+                  {p.status}
+                </span>
+              </div>
+            </div>
+            <button
+              onClick={() => deleteProduct(p.id)}
+              disabled={deleteLoading === p.id}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-red-400 bg-red-950/30 border border-red-900/40 rounded-xl hover:bg-red-900/30 transition disabled:opacity-50 shrink-0"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              {deleteLoading === p.id ? 'Deleting...' : 'Delete'}
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {/* Customer Reviews */}
+      <div className="space-y-3">
+        <h3 className="text-lg font-bold text-slate-200 flex items-center gap-2">
+          <Star className="w-5 h-5 text-amber-400" /> Customer Reviews
+          {complaints.length > 0 && (
+            <span className="text-xs bg-red-950/50 border border-red-900/50 text-red-400 px-2 py-0.5 rounded-full">
+              {complaints.length} complaint{complaints.length > 1 ? 's' : ''}
+            </span>
+          )}
+        </h3>
+        {reviews.length === 0 ? (
+          <p className="text-slate-500 text-sm">No reviews received yet.</p>
+        ) : reviews.map(review => (
+          <div key={review.id} className={`bg-slate-900 border rounded-xl p-4 ${
+            review.isComplaint ? 'border-red-900/40' : 'border-slate-800'
+          }`}>
+            <div className="flex justify-between items-start gap-2">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-slate-200 text-sm">{review.User?.name}</span>
+                  <span className="text-xs text-slate-500">{review.User?.city}</span>
+                  {review.isComplaint && (
+                    <span className="text-[10px] bg-red-950/50 border border-red-900/50 text-red-400 px-1.5 py-0.5 rounded-full flex items-center gap-1">
+                      <AlertTriangle className="w-2.5 h-2.5" /> Complaint
+                    </span>
+                  )}
+                </div>
+                <div className="text-xs text-slate-500 mt-0.5">{review.Product?.name}</div>
+              </div>
+              <div className="text-right shrink-0">
+                <div className="flex">
+                  {[1,2,3,4,5].map(s => (
+                    <span key={s} className={`text-sm ${s <= review.rating ? 'text-amber-400' : 'text-slate-700'}`}>★</span>
+                  ))}
+                </div>
+                <span className="text-xs text-slate-600">{new Date(review.createdAt).toLocaleDateString('en-IN')}</span>
+              </div>
+            </div>
+            <p className="text-sm text-slate-300 mt-2">{review.comment}</p>
+          </div>
+        ))}
       </div>
     </div>
   );
