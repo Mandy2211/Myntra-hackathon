@@ -6,6 +6,7 @@ import UploadForm from './UploadForm';
 import ProductsTable from './ProductsTable';
 import CategoryRequestForm from './CategoryRequestForm';
 import { SellerTrendChart, SellerCategoryPieChart, MarketGapChart } from './SellerTrendChart';
+import SellerSummary from './seller-summary';
 
 export default function SellerDashboard() {
   const { user, logout } = useAuth();
@@ -138,6 +139,8 @@ export default function SellerDashboard() {
                 <p className="text-sm text-slate-400 mt-1">Live competitive intelligence for {data?.sellerRegion?.city || user?.city}. Upload products that are trending to capture unmatched local demand.</p>
               </header>
               
+              <SellerSummary categoryData={data?.marketInsights} />
+
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {data?.marketInsights?.length > 0 ? (
                   data.marketInsights.map((insight, idx) => (
