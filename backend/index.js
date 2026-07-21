@@ -60,28 +60,170 @@ function hashPassword(password) {
 }
 
 // ─── Admin Auto-Seed ──────────────────────────────────────────────────────────
-async function seedAdmin() {
+async function seedAdmin(retries = 3) {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const adminEmail = process.env.ADMIN_EMAIL || 'admin@gmail.com';
+      const adminPassword = process.env.ADMIN_PASSWORD || 'admin1234';
+      const existing = await prisma.user.findUnique({ where: { email: adminEmail } });
+      if (!existing) {
+        await prisma.user.create({
+          data: {
+            email: adminEmail,
+            passwordHash: hashPassword(adminPassword),
+            role: 'ADMIN',
+            name: 'Admin',
+            city: 'Delhi',
+            state: 'Delhi',
+            gender: 'Men'
+          }
+        });
+        console.log(`[Admin Seeded] ${adminEmail}`);
+      } else {
+        console.log(`[Admin Verified] ${adminEmail}`);
+      }
+      return;
+    } catch (e) {
+      console.warn(`[Admin Seed Attempt ${attempt}/${retries} Notice]`, e.message);
+      if (attempt === retries) {
+        console.error('[Admin Seed Error] Could not seed admin after retries:', e.message);
+      } else {
+        await new Promise(r => setTimeout(r, 1500));
+      }
+    }
+  }
+}
+
+async function syncAllProductRatings() {
   try {
-    const adminEmail = process.env.ADMIN_EMAIL || 'admin@gmail.com';
-    const adminPassword = process.env.ADMIN_PASSWORD || 'admin1234';
-    const existing = await prisma.user.findUnique({ where: { email: adminEmail } });
-    if (!existing) {
-      await prisma.user.create({
+    const groups = await prisma.review.groupBy({
+      by: ['productId'],
+      _avg: { rating: true },
+      _count: { id: true }
+    });
+
+    for (const group of groups) {
+      const avgRating = group._avg.rating ? Math.round(group._avg.rating * 10) / 10 : 0;
+      const count = group._count.id || 0;
+      await prisma.product.update({
+        where: { id: group.productId },
         data: {
-          email: adminEmail,
-          passwordHash: hashPassword(adminPassword),
-          role: 'ADMIN',
-          name: 'Admin',
-          city: 'Delhi',
-          state: 'Delhi',
-          gender: 'Men'
+          rating: avgRating,
+          ratingTotal: count
         }
       });
-      console.log(`[Admin Seeded] ${adminEmail}`);
     }
-  } catch (e) {
-    console.error('[Admin Seed Error]', e);
+    if (groups.length > 0) {
+      console.log(`[Rating Sync] Synced ratings for ${groups.length} reviewed product(s).`);
+    }
+  } catch (err) {
+    console.error('[Rating Sync Error]', err.message);
   }
+}
+
+// ─── Bayesian Rating Engine ────────────────────────────────────────────────────
+// Implements: score = (v/(v+m))*R + (m/(v+m))*C
+//   R = item avgRating, v = numRatings, C = catalog mean, m = min-vote threshold
+
+function computeGlobalStats(items) {
+  if (!items || items.length === 0) return { C: 4.0, m: 5 };
+  const withRatings = items.filter(i => (i.ratingTotal || 0) > 0);
+  const C = withRatings.length > 0
+    ? withRatings.reduce((sum, i) => sum + (i.rating || 0), 0) / withRatings.length
+    : 4.0;
+  const voteCounts = items.map(i => i.ratingTotal || 0).sort((a, b) => a - b);
+  const pctIdx = Math.floor(voteCounts.length * 0.25);
+  const m = Math.max(voteCounts[pctIdx] || 1, 1);
+  return { C: parseFloat(C.toFixed(4)), m };
+}
+
+function computeStatsByCategory(items) {
+  const grouped = {};
+  items.forEach(item => {
+    const cat = item.category || 'Other';
+    if (!grouped[cat]) grouped[cat] = [];
+    grouped[cat].push(item);
+  });
+  const result = {};
+  for (const [cat, catItems] of Object.entries(grouped)) {
+    result[cat] = computeGlobalStats(catItems);
+  }
+  return result;
+}
+
+// In-memory cache: refreshes every hour
+let _statsCache = { byCategory: {}, global: { C: 4.0, m: 5 }, computedAt: 0 };
+
+async function getStatsByCategory() {
+  const ONE_HOUR = 60 * 60 * 1000;
+  if (Date.now() - _statsCache.computedAt < ONE_HOUR && Object.keys(_statsCache.byCategory).length > 0) {
+    return _statsCache;
+  }
+  try {
+    const items = await prisma.product.findMany({
+      select: { id: true, rating: true, ratingTotal: true, category: true, price: true }
+    });
+    const byCategory = computeStatsByCategory(items);
+    const global = computeGlobalStats(items);
+    _statsCache = { byCategory, global, computedAt: Date.now() };
+    console.log(`[Bayes Cache] Refreshed stats for ${Object.keys(byCategory).length} categories. Global C=${global.C.toFixed(2)}, m=${global.m}`);
+  } catch (err) {
+    console.error('[Bayes Cache Error]', err.message);
+  }
+  return _statsCache;
+}
+
+function bayesianScore(item, C, m) {
+  const v = item.ratingTotal || 0;
+  const R = item.rating || 0;
+  return (v / (v + m)) * R + (m / (v + m)) * C;
+}
+
+// Recency-decayed rating using raw review timestamps (halfLife = 180 days)
+function computeDecayedRating(reviews, halfLifeDays = 180) {
+  const now = Date.now();
+  let weightedSum = 0;
+  let totalWeight = 0;
+  for (const r of reviews) {
+    const ageDays = (now - new Date(r.createdAt).getTime()) / 86400000;
+    const weight = Math.pow(0.5, ageDays / halfLifeDays);
+    weightedSum += (r.rating || 0) * weight;
+    totalWeight += weight;
+  }
+  return {
+    avgRating: totalWeight > 0 ? weightedSum / totalWeight : 0,
+    effectiveVotes: totalWeight
+  };
+}
+
+// Rank items by Bayesian score, optionally price-adjusted, with discovery slots for new items
+function getTopItemsWithDiscovery(items, statsCache, { topN = 12, priceAdjusted = false, budget = null } = {}) {
+  let filtered = budget != null ? items.filter(i => i.price <= budget) : items;
+
+  const ranked = filtered
+    .map(item => {
+      const cat = item.category || 'Other';
+      const { C, m } = statsCache.byCategory[cat] || statsCache.global;
+      const score = bayesianScore(item, C, m);
+      // sqrt(price) softens over-reward of cheap items; exponent 0.4 is tuned
+      const valueScore = priceAdjusted && item.price > 0
+        ? score / Math.pow(item.price, 0.4)
+        : score;
+      return { ...item, bayesianScore: parseFloat(score.toFixed(3)), valueScore };
+    })
+    .sort((a, b) => b.valueScore - a.valueScore);
+
+  const topItems = ranked.slice(0, topN - 2);
+  const topIds = new Set(topItems.map(i => i.id));
+
+  // Discovery: 2 newest items with < 5 reviews not already in top list
+  const discoveryItems = filtered
+    .filter(i => (i.ratingTotal || 0) < 5 && !topIds.has(i.id))
+    .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+    .slice(0, 2)
+    .map(item => ({ ...item, bayesianScore: 0, valueScore: 0, isNew: true }));
+
+  return [...topItems, ...discoveryItems];
 }
 
 app.get('/', (req, res) => res.json({ message: 'Bharat AI Backend running!' }));
@@ -393,25 +535,19 @@ app.get('/api/homepage/shelves', async (req, res) => {
       });
     }
 
-    // ── VERIFIED PICKS (Bayesian) ─────────────────────────────────────────────
-    const verifiedPicks = await prisma.product.findMany({
+    // ── VERIFIED PICKS (Bayesian — per-category stats) ────────────────────────
+    const verifiedCandidates = await prisma.product.findMany({
       where: {
         price: { lte: budget },
         gender: { contains: targetGender, mode: 'insensitive' },
         img: { not: '-' },
         status: 'Active'
       },
-      take: 100
+      take: 200
     });
 
-    const m = 50;
-    const C = 4.0;
-    const scoredVerified = verifiedPicks.map(p => {
-      const v = p.ratingTotal || 0;
-      const R = p.rating || 0;
-      const bayesianScore = ((v / (v + m)) * R) + ((m / (v + m)) * C);
-      return { ...p, bayesianScore };
-    }).sort((a, b) => b.bayesianScore - a.bayesianScore).slice(0, 15);
+    const statsCache = await getStatsByCategory();
+    const scoredVerified = getTopItemsWithDiscovery(verifiedCandidates, statsCache, { topN: 15, priceAdjusted: false });
 
     // ── TRENDING ──────────────────────────────────────────────────────────────
     const recentPurchases = await prisma.purchase.findMany({
@@ -546,20 +682,89 @@ app.get('/api/homepage/budget-picks', async (req, res) => {
     const targetGender = gender || 'Men';
     const budget = parseFloat(maxPrice) || 2000;
 
-    const budgetPicks = await prisma.product.findMany({
+    const candidates = await prisma.product.findMany({
       where: {
         price: { lte: budget },
         gender: { contains: targetGender, mode: 'insensitive' },
+        img: { not: '-' },
         status: 'Active'
       },
-      orderBy: [{ rating: 'desc' }, { ratingTotal: 'desc' }],
-      take: 15
+      take: 200
+    });
+
+    const statsCache = await getStatsByCategory();
+    const budgetPicks = getTopItemsWithDiscovery(candidates, statsCache, {
+      topN: 15, priceAdjusted: false, budget
     });
 
     res.json({ budgetPicks });
   } catch (error) {
     console.error('Error fetching budget picks:', error);
     res.status(500).json({ error: 'Failed to generate budget picks' });
+  }
+});
+
+// ─── Bayesian Budget Shelf API ────────────────────────────────────────────────
+// GET /api/shelf?budget=1500&gender=Women&priceAdjusted=true&n=12
+app.get('/api/shelf', authenticateToken, async (req, res) => {
+  try {
+    const budget = parseFloat(req.query.budget);
+    if (!budget || budget <= 0) {
+      return res.status(400).json({ error: 'Invalid budget. Pass ?budget=<positive number>' });
+    }
+
+    const gender = req.query.gender || req.user?.gender || 'Men';
+    const priceAdjusted = req.query.priceAdjusted === 'true';
+    const topN = Math.min(parseInt(req.query.n) || 12, 50);
+
+    // Fetch candidate products under budget
+    const candidates = await prisma.product.findMany({
+      where: {
+        price: { lte: budget },
+        gender: { contains: gender, mode: 'insensitive' },
+        img: { not: '-' },
+        status: 'Active'
+      },
+      include: { Reviews: { select: { rating: true, createdAt: true } } },
+      take: 500
+    });
+
+    // Apply recency-decayed rating to items that have review rows
+    const enriched = candidates.map(item => {
+      if (item.Reviews && item.Reviews.length > 0) {
+        const { avgRating, effectiveVotes } = computeDecayedRating(item.Reviews);
+        return {
+          ...item,
+          rating: parseFloat(avgRating.toFixed(2)),
+          ratingTotal: Math.round(effectiveVotes),
+          Reviews: undefined
+        };
+      }
+      const { Reviews: _, ...rest } = item;
+      return rest;
+    });
+
+    const statsCache = await getStatsByCategory();
+    const shelf = getTopItemsWithDiscovery(enriched, statsCache, { topN, priceAdjusted, budget });
+
+    // Strip valueScore from response
+    const response = shelf.map(({ valueScore, ...p }) => p);
+
+    res.json({
+      shelf: response,
+      meta: {
+        budget,
+        gender,
+        priceAdjusted,
+        total: response.length,
+        globalC: parseFloat(statsCache.global.C.toFixed(2)),
+        globalM: statsCache.global.m,
+        generatedAt: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    console.error('/api/shelf error:', error);
+    res.status(500).json({ error: 'Failed to generate shelf' });
   }
 });
 
@@ -967,6 +1172,24 @@ app.post('/api/reviews', authenticateToken, async (req, res) => {
       }
     });
 
+    // Recalculate average rating and total reviews for the product
+    const stats = await prisma.review.aggregate({
+      where: { productId },
+      _avg: { rating: true },
+      _count: { id: true }
+    });
+
+    const avgRating = stats._avg.rating ? Math.round(stats._avg.rating * 10) / 10 : 0;
+    const ratingTotal = stats._count.id || 0;
+
+    await prisma.product.update({
+      where: { id: productId },
+      data: {
+        rating: avgRating,
+        ratingTotal: ratingTotal
+      }
+    });
+
     res.json({ message: 'Review submitted', review });
   } catch (error) {
     console.error('Review error:', error);
@@ -1232,4 +1455,5 @@ app.post('/api/search', authenticateToken, async (req, res) => {
 app.listen(PORT, async () => {
   console.log(`Server running on http://localhost:${PORT}`);
   await seedAdmin();
+  await syncAllProductRatings();
 });

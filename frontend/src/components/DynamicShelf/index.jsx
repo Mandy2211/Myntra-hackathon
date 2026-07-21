@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Sparkles, MapPin, CloudRain, Sun, Cloud, Thermometer, Calendar, Star, Sliders, DollarSign, CloudSnow, Wind } from 'lucide-react';
+import BudgetShelf from '../BudgetShelf';
 
 export default function DynamicShelf() {
   const { user, token } = useAuth();
@@ -9,26 +10,23 @@ export default function DynamicShelf() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
-  const [minBudget, setMinBudget] = useState(500);
-  const [maxBudget, setMaxBudget] = useState(2500);
-  const [debouncedBudgetChange, setDebouncedBudgetChange] = useState({ min: 500, max: 2500 });
+  const [budget, setBudget] = useState(2000);
+  const [debouncedBudget, setDebouncedBudget] = useState(2000);
   
   const [activeFilter, setActiveFilter] = useState('All');
   const [genderOverride, setGenderOverride] = useState('');
 
   // Debounce the slider to prevent DDOSing the server
   useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedBudgetChange({ min: minBudget, max: maxBudget });
-    }, 600);
+    const handler = setTimeout(() => setDebouncedBudget(budget), 600);
     return () => clearTimeout(handler);
-  }, [minBudget, maxBudget]);
+  }, [budget]);
 
   useEffect(() => {
     const fetchHomepage = async () => {
       setLoading(true);
       try {
-        let url = `http://localhost:5000/api/homepage?minBudget=${debouncedBudgetChange.min}&maxBudget=${debouncedBudgetChange.max}`;
+        let url = `http://localhost:5000/api/homepage?minBudget=0&maxBudget=${debouncedBudget}`;
         if (user?.exactLocation) {
           url += `&lat=${user.exactLocation.lat}&lon=${user.exactLocation.lon}`;
         }
@@ -37,15 +35,11 @@ export default function DynamicShelf() {
         }
         
         const res = await fetch(url, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+          headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
         
-        if (!res.ok) {
-          throw new Error(data.error || 'Failed to fetch Dynamic Shelf');
-        }
+        if (!res.ok) throw new Error(data.error || 'Failed to fetch Dynamic Shelf');
         
         setShelfData(data);
       } catch (err) {
@@ -55,10 +49,8 @@ export default function DynamicShelf() {
       }
     };
     
-    if (user && token) {
-      fetchHomepage();
-    }
-  }, [user, token, debouncedBudgetChange, genderOverride]);
+    if (user && token) fetchHomepage();
+  }, [user, token, debouncedBudget, genderOverride]);
 
   const getWeatherIcon = (condition) => {
     if (condition === 'Rain' || condition === 'Monsoon') return <CloudRain className="w-4 h-4 text-sky-400" />;
@@ -151,29 +143,30 @@ export default function DynamicShelf() {
         </div>
       </div>
 
-      {/* --- FILTERS & BUDGET SLIDER --- */}
-      <div className="flex flex-col md:flex-row gap-8 justify-between items-start md:items-center">
-        
+      {/* --- FILTERS & SHARED BUDGET SLIDER --- */}
+      <div className="flex flex-col gap-5">
+
+        {/* Filter pills + gender */}
         <div className="flex flex-wrap gap-3 items-center">
           {['All', 'Festival', 'Weather', 'Near Me'].map(f => (
-            <button 
+            <button
               key={f}
               onClick={() => setActiveFilter(f)}
               className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-200 border ${
-                activeFilter === f 
-                  ? 'bg-gradient-to-r from-pink-600 to-purple-600 text-white border-transparent shadow-lg' 
+                activeFilter === f
+                  ? 'bg-gradient-to-r from-pink-600 to-purple-600 text-white border-transparent shadow-lg'
                   : 'bg-slate-900 text-slate-400 border-slate-700 hover:border-pink-500/50 hover:text-slate-200'
               }`}
             >
               {f}
             </button>
           ))}
-          
-          <div className="hidden sm:block h-6 w-px bg-slate-700 mx-2"></div>
-          
+
+          <div className="hidden sm:block h-6 w-px bg-slate-700 mx-2" />
+
           <select
             value={genderOverride}
-            onChange={(e) => setGenderOverride(e.target.value)}
+            onChange={e => setGenderOverride(e.target.value)}
             className="bg-slate-900 border border-slate-700 text-slate-300 text-xs font-semibold rounded-full px-4 py-2 outline-none focus:border-pink-500 transition-colors cursor-pointer appearance-none text-center"
           >
             <option value="">Target: {user?.gender} (You)</option>
@@ -184,30 +177,33 @@ export default function DynamicShelf() {
           </select>
         </div>
 
-        <div className="w-full md:w-96 bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col gap-3">
-          <div className="flex justify-between items-center w-full">
-            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest flex items-center gap-1.5">
-              <DollarSign className="w-3.5 h-3.5 text-emerald-400" /> Budget Shelf Limits
+        {/* Single unified budget slider */}
+        <div className="bg-slate-900 border border-slate-700/60 rounded-2xl px-5 py-4">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[11px] text-slate-400 font-bold uppercase tracking-widest flex items-center gap-1.5">
+              <DollarSign className="w-3.5 h-3.5 text-pink-400" />
+              Max Budget — all shelves
             </span>
-            <span className="text-xs font-bold text-pink-400">₹{minBudget} - ₹{maxBudget}</span>
+            <span className="text-base font-black text-pink-400">₹{budget.toLocaleString('en-IN')}</span>
           </div>
-          
-          <div className="relative pt-1 flex items-center gap-3 w-full">
-            <span className="text-xs text-slate-500">₹500</span>
-            <input 
-              type="range" min="500" max="2500" step="100" 
-              value={maxBudget} 
-              onChange={(e) => {
-                const val = parseInt(e.target.value);
-                if (val >= minBudget) setMaxBudget(val);
-              }}
-              className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-pink-500"
-            />
-            <span className="text-xs text-slate-500">₹2500+</span>
+          <input
+            type="range"
+            min={100}
+            max={10000}
+            step={50}
+            value={budget}
+            onChange={e => setBudget(parseInt(e.target.value))}
+            className="w-full h-2 rounded-lg appearance-none cursor-pointer"
+            style={{
+              background: `linear-gradient(to right, #ec4899 ${(budget - 100) / (10000 - 100) * 100}%, #1e293b ${(budget - 100) / (10000 - 100) * 100}%)`
+            }}
+          />
+          <div className="flex justify-between text-[10px] text-slate-600 mt-2">
+            <span>₹100</span><span>₹2,500</span><span>₹5,000</span><span>₹10,000</span>
           </div>
-          {loading && <div className="text-[10px] text-slate-500 text-center animate-pulse">Syncing...</div>}
+          {loading && <p className="text-[10px] text-slate-500 text-center mt-1 animate-pulse">Syncing shelves...</p>}
         </div>
-        
+
       </div>
 
       {/* --- DYNAMIC SHELVES DIRECT RENDER --- */}
@@ -282,6 +278,11 @@ export default function DynamicShelf() {
             )}
           </div>
         ))}
+      </div>
+
+      {/* ── BAYESIAN BUDGET SHELF — receives shared budget prop ── */}
+      <div className="mt-4">
+        <BudgetShelf budget={debouncedBudget} />
       </div>
     </div>
   );

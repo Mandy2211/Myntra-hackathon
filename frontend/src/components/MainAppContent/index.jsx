@@ -34,10 +34,15 @@ export default function MainAppContent() {
   const navigate = useNavigate();
 
   const [shelves, setShelves] = useState(null);
-  const [budgetPicks, setBudgetPicks] = useState(null);
   const [budget, setBudget] = useState(2000);
+  const [debouncedBudget, setDebouncedBudget] = useState(2000);
   const [loadingShelves, setLoadingShelves] = useState(false);
-  const [loadingBudget, setLoadingBudget] = useState(false);
+  const [loadingBudgetSlider, setLoadingBudgetSlider] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedBudget(budget), 500);
+    return () => clearTimeout(t);
+  }, [budget]);
 
   useEffect(() => {
     fetchCities()
@@ -67,7 +72,7 @@ export default function MainAppContent() {
     return () => clearTimeout(delayDebounceFn);
   }, [customCityInput]);
 
-  // Main Shelves Effect (Fires on Context Change - weather, festival)
+  // Main Shelves Effect (Fires on Context Change - weather, festival, city, gender)
   useEffect(() => {
     const fetchShelves = async () => {
       setLoadingShelves(true);
@@ -77,12 +82,10 @@ export default function MainAppContent() {
           city: user?.city || 'Coimbatore',
           state: user?.state || 'Tamil Nadu',
           gender: user?.gender || 'Men',
-          maxPrice: budget // Send current budget so initial structure syncs
+          maxPrice: 2000 // default budget for initial load
         };
         const activePin = user?.exactLocation?.addressInfo?.postcode || user?.pincode;
-        if (activePin) {
-          queryParams.pincode = activePin;
-        }
+        if (activePin) queryParams.pincode = activePin;
         const query = new URLSearchParams(queryParams);
         const res = await fetch(`http://localhost:5000/api/homepage/shelves?${query}`, {
           headers: { 'Authorization': `Bearer ${token}` }
@@ -90,7 +93,6 @@ export default function MainAppContent() {
         if (res.ok) {
           const data = await res.json();
           setShelves(data);
-          // Just use the first dynamic shelf as budgetPicks fallback if needed, or don't set it since we use dynamic shelves now
         }
       } catch (e) {
         console.error(e);
@@ -100,38 +102,49 @@ export default function MainAppContent() {
     };
 
     fetchShelves();
-    // We intentionally bypass 'budget' dependency here to prevent deep re-renders!
   }, [user?.city, user?.state, user?.gender]);
 
-  // Budget Slider Effect
+  // Separate effect to update ONLY the budget shelf without reloading the whole page
   useEffect(() => {
-    if (!shelves) return; // Wait for initial context load first
+    // Skip if shelves haven't loaded yet or budget is still the default on first load
+    if (!shelves) return;
 
-    const fetchBudgetPicks = async () => {
-      setLoadingBudget(true);
+    const fetchBudgetShelfOnly = async () => {
+      setLoadingBudgetSlider(true);
       try {
         const token = sessionStorage.getItem('token');
         const query = new URLSearchParams({
-          gender: user?.gender || 'Men',
-          maxPrice: budget
+          budget: debouncedBudget,
+          gender: user?.gender || 'Men'
         });
-        const res = await fetch(`http://localhost:5000/api/homepage/budget-picks?${query}`, {
+        const res = await fetch(`http://localhost:5000/api/shelf?${query}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (res.ok) {
           const data = await res.json();
-          setBudgetPicks(data.budgetPicks);
+          setShelves(prev => {
+            if (!prev) return prev;
+            const newDynamic = prev.dynamicShelves.map(s => {
+              if (s.type === 'budget') {
+                return {
+                  ...s,
+                  products: (data.shelf || []).map(p => ({ ...p, reason: `✓ Under your ₹${debouncedBudget} budget` }))
+                };
+              }
+              return s;
+            });
+            return { ...prev, dynamicShelves: newDynamic };
+          });
         }
-      } catch (e) {
-        console.error(e);
+      } catch (err) {
+        console.error(err);
       } finally {
-        setLoadingBudget(false);
+        setLoadingBudgetSlider(false);
       }
     };
-
-    const debounce = setTimeout(fetchBudgetPicks, 500);
-    return () => clearTimeout(debounce);
-  }, [budget, user?.gender]);
+    
+    fetchBudgetShelfOnly();
+  }, [debouncedBudget, user?.gender]);
 
   const handleAutoDetect = () => {
     if ("geolocation" in navigator) {
@@ -391,43 +404,55 @@ export default function MainAppContent() {
           <div className="space-y-12">
 
             {shelves.dynamicShelves?.map((shelf, idx) => (
-              <Shelf
-                key={idx}
-                title={shelf.title}
-                products={shelf.products}
-                isLocalShelf={shelf.type === 'local'}
-                noLocalSellers={shelf.noLocalSellers}
-                isLocalSeller={shelf.isLocalSeller}
-              />
-            ))}
-
-            {/* Budget Picks Area */}
-            <div>
-              <div className="w-full max-w-md mb-6 bg-slate-900 p-4 rounded-xl border border-slate-800 relative overflow-hidden">
-                {loadingBudget && (
-                  <div className="absolute top-0 right-0 p-2">
-                    <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent flex items-center justify-center rounded-full animate-spin"></div>
+              <React.Fragment key={idx}>
+                {/* Budget slider appears inline, just above the budget shelf */}
+                {shelf.type === 'budget' && (
+                  <div className="bg-slate-900 border border-slate-700/60 rounded-2xl px-5 py-4 mb-2 relative">
+                    {loadingBudgetSlider && (
+                      <div className="absolute top-4 right-5 flex items-center gap-2">
+                        <div className="w-3 h-3 border-2 border-pink-500 border-t-transparent rounded-full animate-spin"></div>
+                        <span className="text-[10px] text-pink-400 font-bold uppercase tracking-widest animate-pulse">Syncing</span>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between mb-3">
+                      <label className="text-[11px] text-slate-400 font-bold uppercase tracking-widest">
+                        💰 Max Budget
+                      </label>
+                      <span className={`text-base font-black transition-colors ${loadingBudgetSlider ? 'text-slate-500' : 'text-pink-400'}`}>
+                        ₹{parseInt(budget).toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min={100}
+                      max={10000}
+                      step={50}
+                      value={budget}
+                      onChange={e => setBudget(parseInt(e.target.value))}
+                      className="w-full h-2 rounded-lg appearance-none cursor-pointer"
+                      style={{
+                        background: `linear-gradient(to right, #ec4899 ${(budget - 100) / (10000 - 100) * 100}%, #1e293b ${(budget - 100) / (10000 - 100) * 100}%)`
+                      }}
+                    />
+                    <div className="flex justify-between text-[10px] text-slate-600 mt-2">
+                      <span>₹100</span><span>₹2,500</span><span>₹5,000</span><span>₹10,000</span>
+                    </div>
                   </div>
                 )}
-                <div className="flex justify-between items-end mb-2">
-                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">Adjust Max Budget Priority</label>
-                  <span className={`text-lg font-bold transition-colors ${loadingBudget ? 'text-slate-500' : 'text-emerald-400'}`}>₹{budget}</span>
-                </div>
-                <input
-                  type="range"
-                  min="200"
-                  max="10000"
-                  step="100"
-                  value={budget}
-                  onChange={(e) => setBudget(e.target.value)}
-                  className="w-full accent-emerald-500 h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer"
-                />
-              </div>
 
-              <div className={`transition-opacity duration-300 ${loadingBudget ? 'opacity-30' : 'opacity-100'}`}>
-                <Shelf title="💎 Top Rated under Budget" products={budgetPicks} />
-              </div>
-            </div>
+                <Shelf
+                  title={
+                    shelf.type === 'budget'
+                      ? `💰 ${budget === 2000 ? 'Under your budget' : `Under ₹${parseInt(budget).toLocaleString('en-IN')}`}`
+                      : shelf.title
+                  }
+                  products={shelf.products}
+                  isLocalShelf={shelf.type === 'local'}
+                  noLocalSellers={shelf.noLocalSellers}
+                  isLocalSeller={shelf.isLocalSeller}
+                />
+              </React.Fragment>
+            ))}
 
           </div>
         ) : (
