@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { ShoppingBag, MapPin, User as UserIcon, LogOut, Sun, CloudRain, ThermometerSnowflake, Search, UserCircle } from 'lucide-react';
+import { ShoppingBag, MapPin, User as UserIcon, LogOut, Sun, CloudRain, ThermometerSnowflake, Search, UserCircle, BadgeCheck } from 'lucide-react';
 import { fetchCities } from '../../services/api';
 import DynamicShelf from '../DynamicShelf';
+import CheckoutModal from '../Checkout';
+import MicButton from '../MicButton';
 
 const fetchFallbackPincode = async (cityName) => {
   try {
@@ -226,13 +228,14 @@ export default function MainAppContent() {
             className="flex items-center bg-slate-800/80 rounded-full border border-slate-700 focus-within:border-pink-500/50 px-4 py-2 transition"
           >
             <Search className="w-4 h-4 text-slate-400 mr-2" />
-            <input 
-              type="text" 
+            <input
+              type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search for clothes (e.g., 'Red Velvet Dress')..." 
+              placeholder="Search for clothes (e.g., 'Red Velvet Dress')..."
               className="bg-transparent text-sm focus:outline-none text-slate-200 w-full placeholder:text-slate-500"
             />
+            <MicButton onResult={(text) => { setSearchQuery(text); navigate(`/search?q=${encodeURIComponent(text)}`); }} />
           </form>
         </div>
 
@@ -467,31 +470,7 @@ export default function MainAppContent() {
 }
 
 const Shelf = ({ title, products, isLocalShelf = false, noLocalSellers = false, isLocalSeller = true }) => {
-  const { user } = useAuth();
-
-  const handleBuy = async (productId, cityName, stateName) => {
-    try {
-      const token = sessionStorage.getItem('token');
-      const res = await fetch("http://localhost:5000/api/purchase", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({ productId, quantity: 1, cityName, stateName }),
-      });
-
-      const data = await res.json();
-
-      if (data.success) {
-        alert(`Order placed. ${data.remainingStock} left in stock.`);
-      } else {
-        alert(data.error ?? "Purchase failed");
-      }
-    } catch (err) {
-      alert("Purchase failed");
-    }
-  };
+  const [checkoutProduct, setCheckoutProduct] = useState(null);
 
   if (!products || products.length === 0) return null;
 
@@ -540,6 +519,11 @@ const Shelf = ({ title, products, isLocalShelf = false, noLocalSellers = false, 
                   {p.reason}
                 </div>
               )}
+              {p.verifiedSeller && (
+                <div className="inline-flex items-center gap-1 text-[10px] font-bold text-sky-300 bg-sky-950/40 border border-sky-800/50 px-2 py-0.5 rounded-full mb-2 w-fit">
+                  <BadgeCheck className="w-3 h-3" /> Verified Local Seller
+                </div>
+              )}
               <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400 mb-1">{p.seller || p.brand || p.brand_name || 'Brand'}</div>
               <h4 className="font-medium text-sm text-slate-200 line-clamp-2 mb-3 h-10" title={p.name}>{p.name}</h4>
               <div className="flex justify-between items-center mt-auto">
@@ -552,10 +536,10 @@ const Shelf = ({ title, products, isLocalShelf = false, noLocalSellers = false, 
                 </div>
               </div>
               
-              <button 
+              <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleBuy(p.id, user?.city, user?.state);
+                  setCheckoutProduct(p);
                 }}
                 disabled={p.remainingStock === 0}
                 className="mt-3 w-full py-2 rounded-lg bg-pink-600 hover:bg-pink-500 text-white font-bold text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -566,6 +550,13 @@ const Shelf = ({ title, products, isLocalShelf = false, noLocalSellers = false, 
           </div>
         ))}
       </div>
+
+      {checkoutProduct && (
+        <CheckoutModal
+          product={checkoutProduct}
+          onClose={() => setCheckoutProduct(null)}
+        />
+      )}
     </div>
   )
 }

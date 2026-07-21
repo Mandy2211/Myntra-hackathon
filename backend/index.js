@@ -11,6 +11,7 @@ const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const enrichment = require('./services/enrichment');
 const llmEnrichment = require('./services/llm-enrichment');
 const searchIntelligence = require('./services/search-intelligence');
+const { scoreProduct } = require('./services/office-score');
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -129,6 +130,32 @@ async function syncAllProductRatings() {
   } catch (err) {
     console.error('[Rating Sync Error]', err.message);
   }
+}
+
+// ─── Verified Local Seller ─────────────────────────────────────────────────────
+// A seller is "verified" when not blocked and their complaint ratio stays at or
+// under 20%. New sellers (no reviews yet) start verified. Reuses the same
+// complaint logic the admin dashboard uses.
+async function getVerifiedSellerIds() {
+  const verified = new Set();
+  try {
+    const sellers = await prisma.user.findMany({
+      where: { role: 'SELLER' },
+      select: { id: true, isBlocked: true, Products: { select: { id: true } } }
+    });
+    for (const s of sellers) {
+      if (s.isBlocked) continue;
+      const productIds = s.Products.map(p => p.id);
+      if (productIds.length === 0) { verified.add(s.id); continue; }
+      const totalReviews = await prisma.review.count({ where: { productId: { in: productIds } } });
+      const complaints = await prisma.review.count({ where: { productId: { in: productIds }, isComplaint: true } });
+      const ratio = totalReviews > 0 ? (complaints / totalReviews) * 100 : 0;
+      if (ratio <= 20) verified.add(s.id);
+    }
+  } catch (err) {
+    console.error('[Verified Sellers Error]', err.message);
+  }
+  return verified;
 }
 
 // ─── Bayesian Rating Engine ────────────────────────────────────────────────────
@@ -448,6 +475,9 @@ app.get('/api/homepage/shelves', async (req, res) => {
 
     const hasLocalSellers = localPicks.length > 0;
 
+    // Mark which local sellers are verified (low complaint ratio, not blocked)
+    const verifiedSellerIds = hasLocalSellers ? await getVerifiedSellerIds() : new Set();
+
     // ── WEATHER PICKS ─────────────────────────────────────────────────────────
     let weatherWhere = {
       climate: climate,
@@ -614,7 +644,11 @@ app.get('/api/homepage/shelves', async (req, res) => {
         title: localTitle,
         type: 'local',
         isLocalSeller: true,
-        products: localPicks.map(p => ({ ...p, reason: `✓ Ships locally from ${p.city || resolvedCity}` }))
+        products: localPicks.map(p => ({
+          ...p,
+          reason: `✓ Ships locally from ${p.city || resolvedCity}`,
+          verifiedSeller: p.sellerId ? verifiedSellerIds.has(p.sellerId) : false
+        }))
       });
     } else {
       // No local sellers — show national catalog without "ships locally" label
@@ -1430,10 +1464,23 @@ app.post('/api/search', authenticateToken, async (req, res) => {
       },
     });
 
+    // Detect office/work intent up front — it changes how we build the query.
+    const occ = (parsed.occasion || "").toLowerCase();
+    const officeIntent =
+      occ.includes("office") || occ.includes("work") || occ.includes("formal") ||
+      (parsed.occupation && parsed.occupation !== "NA") ||
+      (parsed.exclusions && parsed.exclusions.length > 0);
+
     const where = { status: "Active" };
 
     if (parsed.gender && parsed.gender !== "NA") where.gender = parsed.gender;
-    if (parsed.occasion && parsed.occasion !== "NA") where.occasion = { contains: parsed.occasion, mode: "insensitive" };
+    else if (officeIntent && req.user?.gender) where.gender = req.user.gender;
+
+    // Skip the occasion filter for office intent — the catalog rarely tags "office",
+    // so we pull a broad workwear pool and rank it by Office Suitability instead.
+    if (!officeIntent && parsed.occasion && parsed.occasion !== "NA") {
+      where.occasion = { contains: parsed.occasion, mode: "insensitive" };
+    }
     if (parsed.material && parsed.material !== "NA") where.material = { contains: parsed.material, mode: "insensitive" };
     if (parsed.budget && parsed.budget !== "NA" && !isNaN(Number(parsed.budget))) {
       where.price = { lte: Number(parsed.budget) };
@@ -1446,15 +1493,48 @@ app.post('/api/search', authenticateToken, async (req, res) => {
         { category: { contains: term, mode: "insensitive" } },
         { ethnic_style: { contains: term, mode: "insensitive" } },
       ]);
+    } else if (officeIntent) {
+      // No specific product named — pull workwear-relevant apparel to score/rank
+      const workwearCats = ['top', 'kurta', 'kurti', 'trouser', 'blazer', 'shirt', 'palazzo', 'dress', 'jeans'];
+      where.OR = workwearCats.flatMap(term => [
+        { category: { contains: term, mode: "insensitive" } },
+        { name: { contains: term, mode: "insensitive" } },
+      ]);
     }
 
-    const products = await prisma.product.findMany({
+    let products = await prisma.product.findMany({
       where,
       orderBy: [{ festival_priority: "desc" }, { rating: "desc" }],
-      take: 30,
+      take: officeIntent ? 120 : 60,
     });
 
-    res.json({ parsed, products });
+    // Tag verified local sellers (low complaint ratio) when seller products appear
+    if (products.some(p => p.sellerId)) {
+      const verifiedSellerIds = await getVerifiedSellerIds();
+      products = products.map(p => ({
+        ...p,
+        verifiedSeller: p.sellerId ? verifiedSellerIds.has(p.sellerId) : false
+      }));
+    }
+
+    // ── Office-wear intelligence ──────────────────────────────────────────────
+    // Filters out excluded styles and ranks the pool by Office Suitability.
+
+    if (officeIntent) {
+      products = products
+        .map(p => {
+          const { score, reason, blocked } = scoreProduct(p, parsed.exclusions || []);
+          return { ...p, officeScore: score, officeReason: reason, blocked };
+        })
+        .filter(p => !p.blocked)
+        .sort((a, b) => b.officeScore - a.officeScore)
+        .slice(0, 30)
+        .map(p => ({ ...p, reason: `${p.officeScore}% Office Suitable — ${p.officeReason}` }));
+    } else {
+      products = products.slice(0, 30);
+    }
+
+    res.json({ parsed, officeIntent, products });
   } catch (error) {
     console.error('Search API error:', error);
     res.status(500).json({ error: "Failed to perform search" });
