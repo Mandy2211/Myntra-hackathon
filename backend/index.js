@@ -63,8 +63,18 @@ function hashPassword(password) {
 async function seedAdmin(retries = 3) {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
-      const adminEmail = process.env.ADMIN_EMAIL || 'admin@gmail.com';
-      const adminPassword = process.env.ADMIN_PASSWORD || 'admin1234';
+      let adminEmail = process.env.ADMIN_EMAIL;
+      let adminPassword = process.env.ADMIN_PASSWORD;
+
+      if (!adminEmail || !adminPassword) {
+        if (attempt === 1) console.warn('[Admin Seed] Warning: ADMIN_EMAIL or ADMIN_PASSWORD missing from .env. Skipping auto-seed.');
+        return;
+      }
+      
+      // Strip accidental quotes if they were loaded verbatim from .env
+      adminEmail = adminEmail.replace(/^["']|["']$/g, '').trim();
+      adminPassword = adminPassword.replace(/^["']|["']$/g, '').trim();
+
       const existing = await prisma.user.findUnique({ where: { email: adminEmail } });
       if (!existing) {
         await prisma.user.create({
@@ -265,9 +275,9 @@ app.get('/api/cities', async (req, res) => {
 
 // ─── Auth Routes ──────────────────────────────────────────────────────────────
 app.post('/api/auth/register', async (req, res) => {
-  const { 
-    email, password, role, name, city, state, gender, 
-    pincode, mobileNumber, businessType, businessName, gstNumber, yearsInBusiness, primaryProduct 
+  const {
+    email, password, role, name, city, state, gender,
+    pincode, mobileNumber, businessType, businessName, gstNumber, yearsInBusiness, primaryProduct
   } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
 

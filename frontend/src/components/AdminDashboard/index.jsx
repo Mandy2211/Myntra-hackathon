@@ -413,16 +413,25 @@ export default function AdminDashboard() {
                                 <AlertTriangle className="w-3.5 h-3.5" /> Warn ({seller.warningCount}/2)
                               </button>
                             )}
-                            {seller.canBlock && (
+                            {seller.canBlock ? (
                               <button
                                 onClick={() => blockSeller(seller.id)}
                                 className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-red-400 bg-red-950/40 border border-red-900/50 rounded-xl hover:bg-red-900/30 transition"
                               >
                                 <Ban className="w-3.5 h-3.5" /> Block
                               </button>
-                            )}
-                            {!seller.canWarn && !seller.canBlock && (
-                              <span className="text-xs text-slate-600 px-3 py-2">No action needed</span>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  if (window.confirm('FORCE BLOCK: Are you sure you want to immediately block this seller for severe violations?')) {
+                                    blockSeller(seller.id);
+                                  }
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-400 bg-slate-900 border border-slate-700 rounded-xl hover:bg-red-950/30 hover:border-red-900/50 hover:text-red-400 transition"
+                                title="Block immediately regardless of complaint ratio (e.g. for scams)"
+                              >
+                                <Ban className="w-3.5 h-3.5" /> Force Block
+                              </button>
                             )}
                           </>
                         )}
