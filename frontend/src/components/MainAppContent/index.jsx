@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import { useNavigate } from 'react-router-dom';
-import { ShoppingBag, MapPin, User as UserIcon, LogOut, Sun, CloudRain, ThermometerSnowflake, Search, UserCircle } from 'lucide-react';
+import { ShoppingBag, MapPin, User as UserIcon, LogOut, Sun, Moon, CloudRain, ThermometerSnowflake, Search, UserCircle } from 'lucide-react';
 import { fetchCities } from '../../services/api';
 import DynamicShelf from '../DynamicShelf';
 
@@ -23,6 +24,7 @@ const fetchFallbackPincode = async (cityName) => {
 
 export default function MainAppContent() {
   const { user, logout, updateCity } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   const [cities, setCities] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -198,8 +200,8 @@ export default function MainAppContent() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
-      <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-50 px-4 py-3 sm:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-300">
+      <header className="border-b border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/80 backdrop-blur sticky top-0 z-50 px-4 py-3 sm:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm dark:shadow-none transition-colors">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-pink-600 rounded-lg text-white">
             <ShoppingBag className="w-6 h-6" />
@@ -223,7 +225,7 @@ export default function MainAppContent() {
                 console.error('Navigation failed', err);
               }
             }}
-            className="flex items-center bg-slate-800/80 rounded-full border border-slate-700 focus-within:border-pink-500/50 px-4 py-2 transition"
+            className="flex items-center bg-slate-100 dark:bg-slate-800/80 rounded-full border border-slate-300 dark:border-slate-700 focus-within:border-pink-500/50 px-4 py-2 transition"
           >
             <Search className="w-4 h-4 text-slate-400 mr-2" />
             <input 
@@ -231,14 +233,14 @@ export default function MainAppContent() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search for clothes (e.g., 'Red Velvet Dress')..." 
-              className="bg-transparent text-sm focus:outline-none text-slate-200 w-full placeholder:text-slate-500"
+              className="bg-transparent text-sm focus:outline-none text-slate-900 dark:text-slate-200 w-full placeholder:text-slate-500"
             />
           </form>
         </div>
 
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex flex-col sm:flex-row items-center gap-2">
-            <div className="flex items-center gap-2 bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700">
+            <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 transition-colors">
               <MapPin className="text-pink-500 w-4 h-4" />
 
               {customCityMode ? (
@@ -294,7 +296,7 @@ export default function MainAppContent() {
               ) : (
                 <div className="flex items-center gap-2">
                   <div className="flex flex-col">
-                    <span className="text-sm font-medium text-slate-100 min-w-[3rem] px-1 group relative flex items-center">
+                    <span className="text-sm font-medium text-slate-900 dark:text-slate-100 min-w-[3rem] px-1 group relative flex items-center">
                       {user?.city || 'Select city'}
                     </span>
                     {user?.exactLocation?.displayName && (
@@ -346,25 +348,32 @@ export default function MainAppContent() {
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 text-sm bg-slate-850 px-3 py-1.5 rounded-lg border border-slate-800">
+            <div className="flex items-center gap-2 text-sm bg-slate-100 dark:bg-slate-850 px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-800 transition-colors">
               <UserIcon className="w-4 h-4 text-purple-400" />
               <div className="text-right">
-                <p className="font-semibold text-slate-200 leading-none">{user?.name}</p>
-                <span className="text-[10px] text-purple-300 font-medium uppercase tracking-wider">{user?.role}</span>
+                <p className="font-semibold text-slate-900 dark:text-slate-200 leading-none">{user?.name}</p>
+                <span className="text-[10px] text-purple-600 dark:text-purple-300 font-medium uppercase tracking-wider">{user?.role}</span>
               </div>
             </div>
             {user?.role === 'CUSTOMER' && (
               <button
                 onClick={() => navigate('/profile')}
-                className="p-2 bg-slate-800 hover:bg-purple-950/40 hover:text-purple-400 border border-slate-700 hover:border-purple-900/50 rounded-lg transition"
+                className="p-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-purple-100 dark:hover:bg-purple-950/40 hover:text-purple-600 dark:hover:text-purple-400 border border-slate-300 dark:border-slate-700 rounded-lg transition"
                 title="My Profile & Orders"
               >
                 <UserCircle className="w-4 h-4" />
               </button>
             )}
             <button
+              onClick={toggleTheme}
+              className="p-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 rounded-lg transition"
+              title="Toggle Theme"
+            >
+              {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
+            <button
               onClick={logout}
-              className="p-2 bg-slate-800 hover:bg-rose-950/40 hover:text-rose-450 border border-slate-700 hover:border-rose-900/50 rounded-lg transition"
+              className="p-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-rose-100 dark:hover:bg-rose-950/40 hover:text-rose-600 dark:hover:text-rose-450 border border-slate-300 dark:border-slate-700 rounded-lg transition"
               title="Logout"
             >
               <LogOut className="w-4 h-4" />
@@ -376,15 +385,15 @@ export default function MainAppContent() {
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-8 py-8 flex flex-col gap-6">
 
         {/* Context bar / Controls */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-xl">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-sm dark:shadow-xl transition-colors">
           <div className="flex items-center gap-4">
             {shelves?.context && (
-              <div className="bg-slate-950 px-4 py-2 rounded-xl flex items-center gap-3 border border-slate-800">
+              <div className="bg-slate-50 dark:bg-slate-950 px-4 py-2 rounded-xl flex items-center gap-3 border border-slate-200 dark:border-slate-800 transition-colors">
                 {getClimateIcon(shelves.context.climate)}
                 <div>
-                  <div className="text-xs text-slate-400 font-bold uppercase tracking-wider">Current Forecast</div>
-                  <div className="font-medium text-slate-200">
-                    <span className="font-bold text-white">{shelves.context.temperature}°C</span>, {shelves.context.climate}
+                  <div className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Current Forecast</div>
+                  <div className="font-medium text-slate-700 dark:text-slate-200">
+                    <span className="font-bold text-slate-900 dark:text-white">{shelves.context.temperature}°C</span>, {shelves.context.climate}
                   </div>
                 </div>
               </div>
@@ -398,7 +407,7 @@ export default function MainAppContent() {
             <div className="w-12 h-12 border-4 border-pink-500 border-t-transparent flex items-center justify-center rounded-full animate-spin">
               <div className="w-6 h-6 border-4 border-purple-500 border-b-transparent rounded-full animate-spin-reverse opacity-70"></div>
             </div>
-            <p className="mt-4 text-sm text-slate-400 font-medium">Building contextual shelves for {user?.city}...</p>
+            <p className="mt-4 text-sm text-slate-500 dark:text-slate-400 font-medium">Building contextual shelves for {user?.city}...</p>
           </div>
         ) : shelves ? (
           <div className="space-y-12">
@@ -407,18 +416,18 @@ export default function MainAppContent() {
               <React.Fragment key={idx}>
                 {/* Budget slider appears inline, just above the budget shelf */}
                 {shelf.type === 'budget' && (
-                  <div className="bg-slate-900 border border-slate-700/60 rounded-2xl px-5 py-4 mb-2 relative">
+                  <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/60 rounded-2xl px-5 py-4 mb-2 relative shadow-sm dark:shadow-none transition-colors">
                     {loadingBudgetSlider && (
                       <div className="absolute top-4 right-5 flex items-center gap-2">
                         <div className="w-3 h-3 border-2 border-pink-500 border-t-transparent rounded-full animate-spin"></div>
-                        <span className="text-[10px] text-pink-400 font-bold uppercase tracking-widest animate-pulse">Syncing</span>
+                        <span className="text-[10px] text-pink-500 dark:text-pink-400 font-bold uppercase tracking-widest animate-pulse">Syncing</span>
                       </div>
                     )}
                     <div className="flex items-center justify-between mb-3">
-                      <label className="text-[11px] text-slate-400 font-bold uppercase tracking-widest">
+                      <label className="text-[11px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest">
                         💰 Max Budget
                       </label>
-                      <span className={`text-base font-black transition-colors ${loadingBudgetSlider ? 'text-slate-500' : 'text-pink-400'}`}>
+                      <span className={`text-base font-black transition-colors ${loadingBudgetSlider ? 'text-slate-400 dark:text-slate-500' : 'text-pink-600 dark:text-pink-400'}`}>
                         ₹{parseInt(budget).toLocaleString('en-IN')}
                       </span>
                     </div>
@@ -434,7 +443,7 @@ export default function MainAppContent() {
                         background: `linear-gradient(to right, #ec4899 ${(budget - 100) / (10000 - 100) * 100}%, #1e293b ${(budget - 100) / (10000 - 100) * 100}%)`
                       }}
                     />
-                    <div className="flex justify-between text-[10px] text-slate-600 mt-2">
+                    <div className="flex justify-between text-[10px] text-slate-500 dark:text-slate-600 mt-2">
                       <span>₹100</span><span>₹2,500</span><span>₹5,000</span><span>₹10,000</span>
                     </div>
                   </div>
@@ -456,7 +465,7 @@ export default function MainAppContent() {
 
           </div>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-slate-500">
+          <div className="flex-1 flex items-center justify-center text-slate-500 dark:text-slate-500">
             Select a location to view personalized shelves.
           </div>
         )}
@@ -497,27 +506,27 @@ const Shelf = ({ title, products, isLocalShelf = false, noLocalSellers = false, 
 
   return (
     <div className="w-full">
-      <h3 className="text-2xl font-extrabold text-slate-100 mb-2 flex items-center gap-2">
+      <h3 className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 mb-2 flex items-center gap-2 transition-colors">
         {title}
-        <span className="text-xs font-medium bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full ml-2 border border-slate-700">
+        <span className="text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded-full ml-2 border border-slate-200 dark:border-slate-700 transition-colors">
           {products.length} items
         </span>
       </h3>
 
       {/* Working on connecting sellers message */}
       {isLocalShelf && noLocalSellers && (
-        <div className="mb-4 bg-gradient-to-r from-purple-950/40 to-pink-950/40 border border-purple-900/40 rounded-xl px-4 py-3 flex items-center gap-3">
+        <div className="mb-4 bg-gradient-to-r from-purple-50/80 to-pink-50/80 dark:from-purple-950/40 dark:to-pink-950/40 border border-purple-200 dark:border-purple-900/40 rounded-xl px-4 py-3 flex items-center gap-3">
           <span className="text-2xl">🏗️</span>
           <div>
-            <p className="text-sm font-semibold text-purple-300">We are working on connecting you to your local seller</p>
+            <p className="text-sm font-semibold text-purple-700 dark:text-purple-300">We are working on connecting you to your local seller</p>
             <p className="text-xs text-slate-500 mt-0.5">Showing national catalog products in the meantime</p>
           </div>
         </div>
       )}
       <div className="flex overflow-x-auto gap-4 pb-4 snap-x hide-scroll">
         {products.map(p => (
-          <div key={p.id} className="snap-start shrink-0 w-[220px] bg-slate-900 border border-slate-800 rounded-xl overflow-hidden hover:border-pink-500/50 hover:shadow-lg hover:shadow-pink-900/10 transition-all duration-300 group">
-            <div className="relative h-[280px] overflow-hidden bg-slate-950">
+          <div key={p.id} className="snap-start shrink-0 w-[220px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden hover:border-pink-500/50 hover:shadow-lg hover:shadow-pink-900/10 dark:hover:shadow-pink-900/10 transition-all duration-300 group shadow-sm dark:shadow-none">
+            <div className="relative h-[280px] overflow-hidden bg-slate-50 dark:bg-slate-950">
               <img
                 src={p.img?.split(';')[0]}
                 alt={p.name}
@@ -536,19 +545,19 @@ const Shelf = ({ title, products, isLocalShelf = false, noLocalSellers = false, 
             </div>
             <div className="p-4 relative min-h-[140px] flex flex-col">
               {p.reason && isLocalSeller && (
-                <div className="text-[10px] font-medium text-emerald-400 bg-emerald-950/30 border border-emerald-900/50 px-2 py-1 rounded-md mb-2 leading-tight">
+                <div className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 px-2 py-1 rounded-md mb-2 leading-tight">
                   {p.reason}
                 </div>
               )}
-              <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400 mb-1">{p.seller || p.brand || p.brand_name || 'Brand'}</div>
-              <h4 className="font-medium text-sm text-slate-200 line-clamp-2 mb-3 h-10" title={p.name}>{p.name}</h4>
+              <div className="text-[10px] uppercase font-bold tracking-wider text-slate-500 dark:text-slate-400 mb-1">{p.seller || p.brand || p.brand_name || 'Brand'}</div>
+              <h4 className="font-medium text-sm text-slate-800 dark:text-slate-200 line-clamp-2 mb-3 h-10" title={p.name}>{p.name}</h4>
               <div className="flex justify-between items-center mt-auto">
                 <div>
-                  <span className="font-bold text-lg text-emerald-400">₹{p.price}</span>
-                  {p.mrp > p.price && <span className="text-xs text-slate-500 line-through ml-2">₹{p.mrp}</span>}
+                  <span className="font-bold text-lg text-emerald-600 dark:text-emerald-400">₹{p.price}</span>
+                  {p.mrp > p.price && <span className="text-xs text-slate-400 dark:text-slate-500 line-through ml-2">₹{p.mrp}</span>}
                 </div>
-                <div className="flex items-center gap-1 bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">
-                  <span className="text-[10px] font-bold text-amber-400">⭐ {p.rating}</span>
+                <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+                  <span className="text-[10px] font-bold text-amber-500 dark:text-amber-400">⭐ {p.rating}</span>
                 </div>
               </div>
               
