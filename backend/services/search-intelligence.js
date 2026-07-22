@@ -17,8 +17,10 @@ const searchSchema = z.object({
   colour: z.string().describe('Color mentioned or NA'),
   material: z.string().describe('Material mentioned (e.g. leather, cotton) or NA'),
   gender: z.string().describe('Gender (Men, Women, Boys, Girls) for specific searches like saree you can decide gender or NA'),
-  occasion: z.string().describe('Occasion (party, casual, formal, wedding, festive) or NA'),
-  budget: z.string().describe('Maximum numerical price or NA')
+  occasion: z.string().describe('Occasion (party, casual, formal, wedding, festive, office, work) or NA'),
+  budget: z.string().describe('Maximum numerical price or NA'),
+  occupation: z.string().describe('Profession or workplace mentioned (e.g. software engineer, teacher, doctor) or NA'),
+  exclusions: z.array(z.string()).describe('Styles or attributes the user explicitly does NOT want (e.g. crop top, sleeveless, deep neck, shirt). Empty array if none.')
 });
 
 const searchExtractor = llm.withStructuredOutput(searchSchema, {
@@ -27,7 +29,7 @@ const searchExtractor = llm.withStructuredOutput(searchSchema, {
 
 async function parseSearchQuery(rawQuery) {
   try {
-    const prompt = `Extract shopping search intent from this raw query: "${rawQuery}". Extract specific fields. If a field is not derivable, strictly output "NA" for that string field.`;
+    const prompt = `Extract shopping search intent from this raw query: "${rawQuery}". Extract specific fields. Capture anything the user says they do NOT want into exclusions (e.g. "no crop tops", "not sleeveless" -> ["crop top","sleeveless"]). If a field is not derivable, strictly output "NA" for that string field and [] for exclusions.`;
     const result = await searchExtractor.invoke(prompt);
     return {
       category: result.category || "NA",
@@ -36,11 +38,13 @@ async function parseSearchQuery(rawQuery) {
       material: result.material || "NA",
       gender: result.gender || "NA",
       occasion: result.occasion || "NA",
-      budget: result.budget || "NA"
+      budget: result.budget || "NA",
+      occupation: result.occupation || "NA",
+      exclusions: Array.isArray(result.exclusions) ? result.exclusions : []
     };
   } catch (err) {
     console.error("LLM Search Parse Error:", err);
-    return { category: "NA", type: "NA", colour: "NA", material: "NA", gender: "NA", occasion: "NA", budget: "NA" };
+    return { category: "NA", type: "NA", colour: "NA", material: "NA", gender: "NA", occasion: "NA", budget: "NA", occupation: "NA", exclusions: [] };
   }
 }
 
