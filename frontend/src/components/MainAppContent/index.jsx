@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useNavigate } from 'react-router-dom';
-import { ShoppingBag, MapPin, User as UserIcon, LogOut, Sun, CloudRain, ThermometerSnowflake, Search, UserCircle, BadgeCheck } from 'lucide-react';
+import { ShoppingBag, MapPin, User as UserIcon, LogOut, Sun, Moon, CloudRain, ThermometerSnowflake, Search, UserCircle, BadgeCheck } from 'lucide-react';
 import { fetchCities } from '../../services/api';
 import DynamicShelf from '../DynamicShelf';
 import CheckoutModal from '../Checkout';

@@ -481,7 +481,7 @@ app.get('/api/homepage/shelves', async (req, res) => {
     // ── WEATHER PICKS ─────────────────────────────────────────────────────────
     let weatherWhere = {
       climate: climate,
-      gender: { contains: targetGender, mode: 'insensitive' },
+      gender: { in: [targetGender, 'Unisex', 'unisex'] },
       img: { not: '-' },
       status: 'Active',
       NOT: {
@@ -542,7 +542,7 @@ app.get('/api/homepage/shelves', async (req, res) => {
     const budgetPicks = await prisma.product.findMany({
       where: {
         price: { lte: budget },
-        gender: { contains: targetGender, mode: 'insensitive' },
+        gender: { in: [targetGender, 'Unisex', 'unisex'] },
         img: { not: '-' },
         status: 'Active'
       },
@@ -566,7 +566,7 @@ app.get('/api/homepage/shelves', async (req, res) => {
       festivalPicks = await prisma.product.findMany({
         where: {
           OR: orConditions,
-          gender: { contains: targetGender, mode: 'insensitive' },
+          gender: { in: [targetGender, 'Unisex', 'unisex'] },
           img: { not: '-' },
           status: 'Active'
         },
@@ -579,7 +579,7 @@ app.get('/api/homepage/shelves', async (req, res) => {
     const verifiedCandidates = await prisma.product.findMany({
       where: {
         price: { lte: budget },
-        gender: { contains: targetGender, mode: 'insensitive' },
+        gender: { in: [targetGender, 'Unisex', 'unisex'] },
         img: { not: '-' },
         status: 'Active'
       },
@@ -621,7 +621,7 @@ app.get('/api/homepage/shelves', async (req, res) => {
     if (!hasLocalSellers) {
       nationalCatalogFallback = await prisma.product.findMany({
         where: {
-          gender: { contains: targetGender, mode: 'insensitive' },
+          gender: { in: [targetGender, 'Unisex', 'unisex'] },
           img: { not: '-' },
           status: 'Active',
           source: 'imported'
@@ -729,7 +729,7 @@ app.get('/api/homepage/budget-picks', async (req, res) => {
     const candidates = await prisma.product.findMany({
       where: {
         price: { lte: budget },
-        gender: { contains: targetGender, mode: 'insensitive' },
+        gender: { in: [targetGender, 'Unisex', 'unisex'] },
         img: { not: '-' },
         status: 'Active'
       },
@@ -765,7 +765,7 @@ app.get('/api/shelf', authenticateToken, async (req, res) => {
     const candidates = await prisma.product.findMany({
       where: {
         price: { lte: budget },
-        gender: { contains: gender, mode: 'insensitive' },
+        gender: { in: [gender, 'Unisex', 'unisex'] },
         img: { not: '-' },
         status: 'Active'
       },

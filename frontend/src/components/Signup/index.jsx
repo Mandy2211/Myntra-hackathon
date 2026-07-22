@@ -111,7 +111,7 @@ export default function Signup() {
       setError('Password must be at least 4 characters');
       return;
     }
-    if (!gender) {
+    if (role !== 'SELLER' && !gender) {
       setError('Please select a gender preference');
       return;
     }
@@ -293,7 +293,7 @@ export default function Signup() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
+                  <div className={`space-y-1.5 ${role === 'SELLER' ? 'col-span-2' : ''}`}>
                     <label className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest">Platform Role</label>
                     <select
                       value={role}
@@ -305,22 +305,22 @@ export default function Signup() {
                     </select>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest">Gender</label>
-                    <select
-                      value={gender}
-                      onChange={(e) => setGender(e.target.value)}
-                      className="w-full bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700/60 focus:border-pink-500 dark:focus:border-pink-500 rounded-xl py-2.5 px-3 text-xs focus:outline-none transition-all duration-200 focus:ring-1 focus:ring-pink-500"
-                      required
-                    >
-                      <option value="" disabled className="bg-slate-900 text-slate-400">Select Gender</option>
-                      <option value="Men" className="bg-slate-900 text-slate-100">Men</option>
-                      <option value="Women" className="bg-slate-900 text-slate-100">Women</option>
-                      <option value="Unisex" className="bg-slate-900 text-slate-100">Unisex</option>
-                      <option value="Boys" className="bg-slate-900 text-slate-100">Boys</option>
-                      <option value="Girls" className="bg-slate-900 text-slate-100">Girls</option>
-                    </select>
-                  </div>
+                  {role !== 'SELLER' && (
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest">Gender</label>
+                      <select
+                        value={gender}
+                        onChange={(e) => setGender(e.target.value)}
+                        className="w-full bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700/60 focus:border-pink-500 dark:focus:border-pink-500 rounded-xl py-2.5 px-3 text-xs focus:outline-none transition-all duration-200 focus:ring-1 focus:ring-pink-500"
+                        required={role !== 'SELLER'}
+                      >
+                        <option value="" disabled className="bg-slate-900 text-slate-400">Select Gender</option>
+                        <option value="Men" className="bg-slate-900 text-slate-100">Men</option>
+                        <option value="Women" className="bg-slate-900 text-slate-100">Women</option>
+                        <option value="Unisex" className="bg-slate-900 text-slate-100">Unisex</option>
+                      </select>
+                    </div>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
