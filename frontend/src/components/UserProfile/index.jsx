@@ -211,11 +211,10 @@ export default function UserProfile() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors -mb-px ${
-                activeTab === tab.id
+              className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors -mb-px ${activeTab === tab.id
                   ? 'border-pink-500 text-pink-400'
                   : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-300'
-              }`}
+                }`}
             >
               <tab.icon className="w-4 h-4" /> {tab.label}
             </button>

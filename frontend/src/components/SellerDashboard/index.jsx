@@ -598,8 +598,8 @@ function FeedbackTab() {
           </h3>
           {warnings.map(w => (
             <div key={w.id} className={`border rounded-xl p-4 flex items-start gap-3 ${w.type === 'BLOCK'
-                ? 'bg-red-950/30 border-red-900/50'
-                : 'bg-amber-950/30 border-amber-900/50'
+              ? 'bg-red-950/30 border-red-900/50'
+              : 'bg-amber-950/30 border-amber-900/50'
               }`}>
               {w.type === 'BLOCK'
                 ? <Ban className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
@@ -637,8 +637,8 @@ function FeedbackTab() {
               <div className="flex gap-3 items-center mt-1">
                 <span className="text-xs text-emerald-400 font-bold">₹{p.price}</span>
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${p.status === 'Active' ? 'bg-emerald-950/50 border-emerald-900/50 text-emerald-400'
-                    : p.status === 'Pending' ? 'bg-amber-950/50 border-amber-900/50 text-amber-400'
-                      : 'bg-red-950/50 border-red-900/50 text-red-400'
+                  : p.status === 'Pending' ? 'bg-amber-950/50 border-amber-900/50 text-amber-400'
+                    : 'bg-red-950/50 border-red-900/50 text-red-400'
                   }`}>
                   {p.status === 'Pending' && <Clock className="w-2.5 h-2.5 inline mr-1" />}
                   {p.status}
