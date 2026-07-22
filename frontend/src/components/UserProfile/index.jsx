@@ -69,29 +69,29 @@ function ReviewModal({ purchase, onClose, onSubmitted }) {
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-lg shadow-2xl">
+      <div className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-2xl p-6 w-full max-w-lg shadow-2xl">
         <div className="flex justify-between items-start mb-4">
           <div>
-            <h3 className="text-lg font-bold text-white">Write a Review</h3>
-            <p className="text-sm text-slate-400 mt-0.5 line-clamp-1">{product?.name}</p>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Write a Review</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-1">{product?.name}</p>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
+          <button onClick={onClose} className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-white text-2xl leading-none">&times;</button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Your Rating</label>
+            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Your Rating</label>
             <StarRating value={rating} onChange={setRating} />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Your Comment</label>
+            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Your Comment</label>
             <textarea
               value={comment}
               onChange={e => setComment(e.target.value)}
               placeholder="Share your experience with this product..."
               rows={4}
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-pink-500 resize-none transition"
+              className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-800 dark:text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-pink-500 resize-none transition"
             />
           </div>
 
@@ -100,9 +100,9 @@ function ReviewModal({ purchase, onClose, onSubmitted }) {
               onClick={() => setIsComplaint(!isComplaint)}
               className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${isComplaint ? 'bg-red-500 border-red-500' : 'border-slate-600'}`}
             >
-              {isComplaint && <CheckCircle className="w-3 h-3 text-white" />}
+              {isComplaint && <CheckCircle className="w-3 h-3 text-slate-900 dark:text-white" />}
             </div>
-            <span className="text-sm text-slate-300">
+            <span className="text-sm text-slate-700 dark:text-slate-300">
               Mark as complaint <span className="text-slate-500 text-xs">(helps admin monitor seller quality)</span>
             </span>
           </label>
@@ -113,11 +113,11 @@ function ReviewModal({ purchase, onClose, onSubmitted }) {
 
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={onClose}
-              className="flex-1 py-2.5 rounded-xl border border-slate-700 text-slate-400 text-sm font-semibold hover:border-slate-600 transition">
+              className="flex-1 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 text-sm font-semibold hover:border-slate-600 transition">
               Cancel
             </button>
             <button type="submit" disabled={loading}
-              className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-pink-600 to-purple-600 text-white text-sm font-bold hover:from-pink-500 hover:to-purple-500 transition disabled:opacity-50">
+              className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-pink-600 to-purple-600 text-slate-900 dark:text-white text-sm font-bold hover:from-pink-500 hover:to-purple-500 transition disabled:opacity-50">
               {loading ? 'Submitting...' : 'Submit Review'}
             </button>
           </div>
@@ -159,21 +159,21 @@ export default function UserProfile() {
   const isReviewed = (purchaseId) => myReviews.some(r => r.purchaseId === purchaseId);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-50 dark:bg-slate-950 transition-colors text-slate-900 dark:text-slate-100 font-sans">
       {/* Header */}
-      <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-50 px-4 py-3 sm:px-8 flex items-center justify-between gap-4">
+      <header className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 backdrop-blur sticky top-0 z-50 px-4 py-3 sm:px-8 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/')} className="p-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition">
+          <button onClick={() => navigate('/')} className="p-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 rounded-lg transition">
             <ChevronLeft className="w-4 h-4" />
           </button>
-          <div className="p-2 bg-pink-600 rounded-lg text-white">
+          <div className="p-2 bg-pink-600 rounded-lg text-slate-900 dark:text-white">
             <ShoppingBag className="w-5 h-5" />
           </div>
           <h1 className="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-rose-400">
             Bharat AI
           </h1>
         </div>
-        <button onClick={logout} className="text-xs text-slate-400 hover:text-rose-400 transition border border-slate-700 px-3 py-1.5 rounded-lg">
+        <button onClick={logout} className="text-xs text-slate-500 dark:text-slate-400 hover:text-rose-400 transition border border-slate-300 dark:border-slate-700 px-3 py-1.5 rounded-lg">
           Logout
         </button>
       </header>
@@ -181,18 +181,18 @@ export default function UserProfile() {
       <main className="max-w-4xl mx-auto px-4 sm:px-8 py-8 space-y-8">
 
         {/* Profile Card */}
-        <div className="bg-gradient-to-br from-slate-900 via-purple-950/20 to-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col sm:flex-row items-start sm:items-center gap-6 shadow-xl">
-          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center text-white text-2xl font-bold shadow-lg">
+        <div className="bg-gradient-to-br from-slate-900 via-purple-950/20 to-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 flex flex-col sm:flex-row items-start sm:items-center gap-6 shadow-sm dark:shadow-xl">
+          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center text-slate-900 dark:text-white text-2xl font-bold shadow-lg">
             {user?.name?.[0]?.toUpperCase() || 'U'}
           </div>
           <div className="flex-1">
-            <h2 className="text-xl font-bold text-white">{user?.name}</h2>
-            <p className="text-slate-400 text-sm">{user?.email}</p>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">{user?.name}</h2>
+            <p className="text-slate-500 dark:text-slate-400 text-sm">{user?.email}</p>
             <div className="flex flex-wrap gap-2 mt-3">
-              <span className="flex items-center gap-1.5 text-xs bg-slate-800 border border-slate-700 px-3 py-1 rounded-full text-slate-300">
+              <span className="flex items-center gap-1.5 text-xs bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 px-3 py-1 rounded-full text-slate-700 dark:text-slate-300">
                 <MapPin className="w-3 h-3 text-pink-400" /> {user?.city}, {user?.state}
               </span>
-              <span className="flex items-center gap-1.5 text-xs bg-slate-800 border border-slate-700 px-3 py-1 rounded-full text-slate-300">
+              <span className="flex items-center gap-1.5 text-xs bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 px-3 py-1 rounded-full text-slate-700 dark:text-slate-300">
                 <User className="w-3 h-3 text-purple-400" /> {user?.gender}
               </span>
               <span className="flex items-center gap-1.5 text-xs bg-emerald-950/50 border border-emerald-900/50 px-3 py-1 rounded-full text-emerald-400">
@@ -203,7 +203,7 @@ export default function UserProfile() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-2 border-b border-slate-800 pb-0">
+        <div className="flex gap-2 border-b border-slate-200 dark:border-slate-800 pb-0">
           {[
             { id: 'orders', label: 'My Orders', icon: ShoppingBag },
             { id: 'reviews', label: 'My Reviews', icon: Star }
@@ -214,7 +214,7 @@ export default function UserProfile() {
               className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors -mb-px ${
                 activeTab === tab.id
                   ? 'border-pink-500 text-pink-400'
-                  : 'border-transparent text-slate-500 hover:text-slate-300'
+                  : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-300'
               }`}
             >
               <tab.icon className="w-4 h-4" /> {tab.label}
@@ -234,7 +234,7 @@ export default function UserProfile() {
                 <ShoppingBag className="w-12 h-12 mx-auto mb-4 opacity-30" />
                 <p className="font-medium">No orders yet</p>
                 <p className="text-sm mt-1">Start shopping to see your orders here</p>
-                <button onClick={() => navigate('/')} className="mt-4 px-6 py-2.5 bg-pink-600 hover:bg-pink-500 text-white text-sm font-bold rounded-xl transition">
+                <button onClick={() => navigate('/')} className="mt-4 px-6 py-2.5 bg-pink-600 hover:bg-pink-500 text-slate-900 dark:text-white text-sm font-bold rounded-xl transition">
                   Shop Now
                 </button>
               </div>
@@ -242,8 +242,8 @@ export default function UserProfile() {
               const product = purchase.Product;
               const reviewed = isReviewed(purchase.id);
               return (
-                <div key={purchase.id} className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row gap-4 hover:border-pink-500/30 transition group">
-                  <div className="w-full sm:w-24 h-32 sm:h-24 rounded-xl overflow-hidden bg-slate-800 shrink-0">
+                <div key={purchase.id} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row gap-4 hover:border-pink-500/30 transition group">
+                  <div className="w-full sm:w-24 h-32 sm:h-24 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 shrink-0">
                     <img
                       src={product?.img?.split(';')[0]}
                       alt={product?.name}
@@ -252,7 +252,7 @@ export default function UserProfile() {
                     />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold text-slate-200 line-clamp-2">{product?.name}</h4>
+                    <h4 className="font-semibold text-slate-800 dark:text-slate-200 line-clamp-2">{product?.name}</h4>
                     <div className="flex flex-wrap gap-3 mt-2">
                       <span className="text-sm font-bold text-emerald-400">₹{purchase.priceAtPurchase}</span>
                       <span className="text-xs text-slate-500">Qty: {purchase.quantity}</span>
@@ -275,7 +275,7 @@ export default function UserProfile() {
                     ) : (
                       <button
                         onClick={() => setReviewTarget(purchase)}
-                        className="flex items-center gap-1.5 text-xs bg-pink-600 hover:bg-pink-500 text-white px-3 py-1.5 rounded-lg font-semibold transition"
+                        className="flex items-center gap-1.5 text-xs bg-pink-600 hover:bg-pink-500 text-slate-900 dark:text-white px-3 py-1.5 rounded-lg font-semibold transition"
                       >
                         <Star className="w-3 h-3" /> Review
                       </button>
@@ -295,9 +295,9 @@ export default function UserProfile() {
                 <p className="text-sm mt-1">Buy products to leave reviews</p>
               </div>
             ) : myReviews.map(review => (
-              <div key={review.id} className="bg-slate-900 border border-slate-800 rounded-2xl p-5 hover:border-purple-500/30 transition">
+              <div key={review.id} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 hover:border-purple-500/30 transition">
                 <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-xl overflow-hidden bg-slate-800 shrink-0">
+                  <div className="w-12 h-12 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 shrink-0">
                     <img
                       src={review.Product?.img?.split(';')[0]}
                       alt={review.Product?.name}
@@ -307,13 +307,13 @@ export default function UserProfile() {
                   </div>
                   <div className="flex-1">
                     <div className="flex justify-between items-start gap-2">
-                      <h4 className="font-semibold text-slate-200 text-sm line-clamp-1">{review.Product?.name}</h4>
+                      <h4 className="font-semibold text-slate-800 dark:text-slate-200 text-sm line-clamp-1">{review.Product?.name}</h4>
                       <span className="text-xs text-slate-500 shrink-0">
                         {new Date(review.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
                       </span>
                     </div>
                     <StarRating value={review.rating} readonly />
-                    <p className="text-sm text-slate-300 mt-2">{review.comment}</p>
+                    <p className="text-sm text-slate-700 dark:text-slate-300 mt-2">{review.comment}</p>
                     {review.isComplaint && (
                       <span className="inline-flex items-center gap-1.5 mt-2 text-xs bg-red-950/40 border border-red-900/50 text-red-400 px-2.5 py-1 rounded-lg">
                         <AlertCircle className="w-3 h-3" /> Complaint

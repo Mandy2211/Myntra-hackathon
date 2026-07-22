@@ -97,17 +97,17 @@ export default function CategoryRequestForm() {
 
   if (status === 'success') {
     return (
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-10 flex flex-col items-center justify-center text-center animate-in fade-in duration-500">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-10 flex flex-col items-center justify-center text-center animate-in fade-in duration-500">
         <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mb-6">
           <CheckCircle2 className="w-10 h-10 text-emerald-400" />
         </div>
         <h2 className="text-3xl font-bold text-white mb-4">Request Received!</h2>
-        <p className="text-slate-400 max-w-md mx-auto mb-8">
+        <p className="text-slate-500 dark:text-slate-400 max-w-md mx-auto mb-8">
           Thank you for helping expand Bharat AI! Our curation team will review your suggested category and sample imagery shortly.
         </p>
         <button 
           onClick={() => setStatus('idle')}
-          className="bg-slate-800 hover:bg-slate-700 text-white font-semibold py-3 px-8 rounded-xl transition-all"
+          className="bg-slate-100 dark:bg-slate-800 hover:bg-slate-700 text-white font-semibold py-3 px-8 rounded-xl transition-all"
         >
           Submit Another Request
         </button>
@@ -116,7 +116,7 @@ export default function CategoryRequestForm() {
   }
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 lg:p-12 overflow-hidden relative">
+    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 lg:p-12 overflow-hidden relative">
       {/* Decorative Blob */}
       <div className="absolute top-0 right-0 w-96 h-96 bg-purple-600/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>
 
@@ -126,7 +126,7 @@ export default function CategoryRequestForm() {
         </div>
         <div>
           <h2 className="text-2xl font-bold text-white mb-2">Request New Category</h2>
-          <p className="text-slate-400 text-sm">Got a unique local product or a hyper-specific category that our AI hasn't cataloged yet? Suggest it below to register it globally.</p>
+          <p className="text-slate-500 dark:text-slate-400 text-sm">Got a unique local product or a hyper-specific category that our AI hasn't cataloged yet? Suggest it below to register it globally.</p>
         </div>
       </div>
 
@@ -141,26 +141,26 @@ export default function CategoryRequestForm() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Category Name */}
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-slate-300">Category Name <span className="text-pink-500">*</span></label>
+            <label className="text-sm font-semibold text-slate-800 dark:text-slate-300">Category Name <span className="text-pink-500">*</span></label>
             <input 
               type="text"
               name="categoryName"
               value={formData.categoryName}
               onChange={handleChange}
               placeholder="e.g. Kalamkari Fabric"
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500 transition-colors placeholder:text-slate-600"
+              className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500 transition-colors placeholder:text-slate-600"
               required
             />
           </div>
 
           {/* Gender Focus */}
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-slate-300">Primary Gender Focus <span className="text-pink-500">*</span></label>
+            <label className="text-sm font-semibold text-slate-800 dark:text-slate-300">Primary Gender Focus <span className="text-pink-500">*</span></label>
             <select 
               name="gender"
               value={formData.gender}
               onChange={handleChange}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-300 focus:outline-none focus:border-purple-500 transition-colors"
+              className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-slate-800 dark:text-slate-300 focus:outline-none focus:border-purple-500 transition-colors"
             >
               <option value="Unisex">Unisex / Unassigned</option>
               <option value="Women">Women</option>
@@ -174,17 +174,17 @@ export default function CategoryRequestForm() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Origin */}
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-slate-300">Category Origin</label>
-            <div className="flex bg-slate-950 border border-slate-800 rounded-xl p-1">
+            <label className="text-sm font-semibold text-slate-800 dark:text-slate-300">Category Origin</label>
+            <div className="flex bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-1">
               <label className="flex-1 cursor-pointer">
                 <input type="radio" name="origin" value="Local" checked={formData.origin === 'Local'} onChange={handleChange} className="sr-only" />
-                <div className={`text-center py-2 rounded-lg text-sm font-medium transition-all ${formData.origin === 'Local' ? 'bg-purple-600 text-white' : 'text-slate-400 hover:text-slate-300'}`}>
+                <div className={`text-center py-2 rounded-lg text-sm font-medium transition-all ${formData.origin === 'Local' ? 'bg-purple-600 text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:text-slate-300'}`}>
                   Local Speciality
                 </div>
               </label>
               <label className="flex-1 cursor-pointer">
                 <input type="radio" name="origin" value="Normal" checked={formData.origin === 'Normal'} onChange={handleChange} className="sr-only" />
-                <div className={`text-center py-2 rounded-lg text-sm font-medium transition-all ${formData.origin === 'Normal' ? 'bg-purple-600 text-white' : 'text-slate-400 hover:text-slate-300'}`}>
+                <div className={`text-center py-2 rounded-lg text-sm font-medium transition-all ${formData.origin === 'Normal' ? 'bg-purple-600 text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:text-slate-300'}`}>
                   General Category
                 </div>
               </label>
@@ -193,15 +193,15 @@ export default function CategoryRequestForm() {
 
           {/* Seasonal */}
           <div className="space-y-2">
-             <label className="text-sm font-semibold text-slate-300 flex justify-between">
+             <label className="text-sm font-semibold text-slate-800 dark:text-slate-300 flex justify-between">
                Is this highly seasonal? 
                <span className="text-xs font-normal text-slate-500">e.g. Winterwear</span>
              </label>
-             <div className="h-11 flex items-center px-4 bg-slate-950 border border-slate-800 rounded-xl">
+             <div className="h-11 flex items-center px-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl">
                <label className="relative inline-flex items-center cursor-pointer">
                  <input type="checkbox" name="isSeasonal" checked={formData.isSeasonal} onChange={handleChange} className="sr-only peer" />
-                 <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
-                 <span className="ml-3 text-sm font-medium text-slate-300">{formData.isSeasonal ? 'Yes, strictly seasonal' : 'No, year-round'}</span>
+                 <div className="w-11 h-6 bg-slate-100 dark:bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                 <span className="ml-3 text-sm font-medium text-slate-800 dark:text-slate-300">{formData.isSeasonal ? 'Yes, strictly seasonal' : 'No, year-round'}</span>
                </label>
              </div>
           </div>
@@ -209,24 +209,24 @@ export default function CategoryRequestForm() {
 
         {/* Description */}
         <div className="space-y-2">
-          <label className="text-sm font-semibold text-slate-300">Detailed Description <span className="text-pink-500">*</span></label>
+          <label className="text-sm font-semibold text-slate-800 dark:text-slate-300">Detailed Description <span className="text-pink-500">*</span></label>
           <textarea 
             name="description"
             value={formData.description}
             onChange={handleChange}
             placeholder="Describe what these items are, what materials are usually used, and why customers search for it..."
-            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500 transition-colors placeholder:text-slate-600 h-32 resize-none"
+            className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500 transition-colors placeholder:text-slate-600 h-32 resize-none"
             required
           ></textarea>
         </div>
 
         {/* Sample Photo */}
         <div className="space-y-2">
-          <label className="text-sm font-semibold text-slate-300">Sample Reference Photo <span className="text-slate-500 font-normal">(Optional)</span></label>
-          <div className="mt-2 flex justify-center rounded-xl border border-dashed border-slate-700 px-6 py-8 bg-slate-950/50 hover:bg-slate-900 transition-colors relative overflow-hidden group">
+          <label className="text-sm font-semibold text-slate-800 dark:text-slate-300">Sample Reference Photo <span className="text-slate-500 font-normal">(Optional)</span></label>
+          <div className="mt-2 flex justify-center rounded-xl border border-dashed border-slate-300 dark:border-slate-700 px-6 py-8 bg-slate-50/50 dark:bg-slate-950/50 hover:bg-white dark:bg-slate-900 transition-colors relative overflow-hidden group">
             <div className="text-center">
               <UploadCloud className="mx-auto h-8 w-8 text-slate-500 group-hover:text-purple-400 transition-colors" aria-hidden="true" />
-              <div className="mt-4 flex text-sm leading-6 text-slate-400 justify-center">
+              <div className="mt-4 flex text-sm leading-6 text-slate-500 dark:text-slate-400 justify-center">
                 <label className="relative cursor-pointer rounded-md font-semibold text-purple-400 focus-within:outline-none hover:text-purple-300">
                   <span>{file ? file.name : "Upload a file"}</span>
                   <input type="file" name="sampleImage" accept="image/*" onChange={handleFileChange} className="sr-only" />
@@ -240,7 +240,7 @@ export default function CategoryRequestForm() {
           </div>
         </div>
 
-        <div className="pt-4 border-t border-slate-800">
+        <div className="pt-4 border-t border-slate-200 dark:border-slate-800">
           <button 
             type="submit" 
             disabled={status === 'loading'}
@@ -257,33 +257,33 @@ export default function CategoryRequestForm() {
 
       {/* Previously Requested Categories */}
       {pastRequests.length > 0 && (
-        <div className="mt-12 pt-8 border-t border-slate-800 relative z-10">
+        <div className="mt-12 pt-8 border-t border-slate-200 dark:border-slate-800 relative z-10">
           <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-4">
             <Clock className="w-5 h-5 text-purple-400" /> Previously Requested
           </h3>
           <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
             {pastRequests.map(req => (
-              <div key={req.id} className="bg-slate-950/50 border border-slate-800 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-slate-700 transition-colors">
+              <div key={req.id} className="bg-slate-50/50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-slate-300 dark:border-slate-700 transition-colors">
                 <div>
-                  <h4 className="text-md font-bold text-slate-200">{req.categoryName}</h4>
+                  <h4 className="text-md font-bold text-slate-800 dark:text-slate-200">{req.categoryName}</h4>
                   <div className="flex gap-3 text-xs text-slate-500 mt-1">
                     <span>{req.gender}</span>
                     <span>•</span>
                     <span>{req.origin} Origin</span>
                     {req.isSeasonal && <span>• Seasonal</span>}
                   </div>
-                  <p className="text-sm text-slate-400 mt-2 line-clamp-2">{req.description}</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 line-clamp-2">{req.description}</p>
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
                   <span className={`px-3 py-1 rounded-full text-xs font-bold ${
                     req.status === 'Approved' ? 'bg-emerald-500/20 text-emerald-400' :
                     req.status === 'Rejected' ? 'bg-rose-500/20 text-rose-400' :
-                    'bg-slate-800 text-slate-300'
+                    'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-300'
                   }`}>
                     {req.status}
                   </span>
                   {req.sampleImageUrl && (
-                    <a href={req.sampleImageUrl} target="_blank" rel="noreferrer" className="w-10 h-10 rounded-lg overflow-hidden border border-slate-700 hover:border-purple-500 transition-colors block">
+                    <a href={req.sampleImageUrl} target="_blank" rel="noreferrer" className="w-10 h-10 rounded-lg overflow-hidden border border-slate-300 dark:border-slate-700 hover:border-purple-500 transition-colors block">
                       <img src={req.sampleImageUrl} alt="Sample" className="w-full h-full object-cover" />
                     </a>
                   )}

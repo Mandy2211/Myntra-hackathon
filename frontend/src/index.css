@@ -1,1 +1,10 @@
 @import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Base background transitions for smooth theme switching */
+@layer base {
+  body {
+    @apply transition-colors duration-300;
+  }
+}
