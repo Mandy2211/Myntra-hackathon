@@ -167,7 +167,7 @@ export default function DynamicShelf() {
           <select
             value={genderOverride}
             onChange={e => setGenderOverride(e.target.value)}
-            className="bg-slate-900 border border-slate-700 text-slate-300 text-xs font-semibold rounded-full px-4 py-2 outline-none focus:border-pink-500 transition-colors cursor-pointer appearance-none text-center"
+            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-300 text-xs font-semibold rounded-full px-4 py-2 outline-none focus:border-pink-500 transition-colors cursor-pointer appearance-none text-center"
           >
             <option value="">Target: {user?.gender} (You)</option>
             <option value="Men">Target: Men</option>
@@ -178,13 +178,13 @@ export default function DynamicShelf() {
         </div>
 
         {/* Single unified budget slider */}
-        <div className="bg-slate-900 border border-slate-700/60 rounded-2xl px-5 py-4">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/60 rounded-2xl px-5 py-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-[11px] text-slate-400 font-bold uppercase tracking-widest flex items-center gap-1.5">
-              <DollarSign className="w-3.5 h-3.5 text-pink-400" />
+            <span className="text-[11px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest flex items-center gap-1.5">
+              <DollarSign className="w-3.5 h-3.5 text-pink-500" />
               Max Budget — all shelves
             </span>
-            <span className="text-base font-black text-pink-400">₹{budget.toLocaleString('en-IN')}</span>
+            <span className="text-base font-black text-pink-600 dark:text-pink-400">₹{budget.toLocaleString('en-IN')}</span>
           </div>
           <input
             type="range"
@@ -195,10 +195,10 @@ export default function DynamicShelf() {
             onChange={e => setBudget(parseInt(e.target.value))}
             className="w-full h-2 rounded-lg appearance-none cursor-pointer"
             style={{
-              background: `linear-gradient(to right, #ec4899 ${(budget - 100) / (10000 - 100) * 100}%, #1e293b ${(budget - 100) / (10000 - 100) * 100}%)`
+              background: `linear-gradient(to right, #ec4899 ${(budget - 100) / (10000 - 100) * 100}%, #cbd5e1 ${(budget - 100) / (10000 - 100) * 100}%)`
             }}
           />
-          <div className="flex justify-between text-[10px] text-slate-600 mt-2">
+          <div className="flex justify-between text-[10px] text-slate-500 dark:text-slate-600 mt-2 font-medium">
             <span>₹100</span><span>₹2,500</span><span>₹5,000</span><span>₹10,000</span>
           </div>
           {loading && <p className="text-[10px] text-slate-500 text-center mt-1 animate-pulse">Syncing shelves...</p>}
@@ -211,7 +211,7 @@ export default function DynamicShelf() {
         {shelfData.shelves.filter(s => activeFilter === 'All' || activeFilter === 'Near Me' || s.title.includes(activeFilter)).map(section => (
           <div key={section.id} className="space-y-6">
             <div className="flex flex-col">
-              <h3 className="text-2xl font-bold text-slate-100 flex items-center gap-2">
+              <h3 className="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                 {section.title.includes("Festival") && <Calendar className="w-6 h-6 text-purple-400" />}
                 {section.title.includes("Weather") && <Sun className="w-6 h-6 text-yellow-400" />}
                 {section.title.includes("Budget") && <DollarSign className="w-6 h-6 text-emerald-400" />}
@@ -220,7 +220,7 @@ export default function DynamicShelf() {
             </div>
             
             {section.products.length === 0 ? (
-              <div className="text-center py-8 bg-slate-900 rounded-2xl border border-slate-800 text-slate-500 text-sm">
+              <div className="text-center py-8 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 text-slate-500 text-sm">
                 No products found in this category right now. Try expanding your filters.
               </div>
             ) : (
@@ -228,9 +228,9 @@ export default function DynamicShelf() {
                 {section.products.map(product => (
                   <div 
                     key={product.id} 
-                    className="min-w-[200px] max-w-[200px] sm:min-w-[240px] sm:max-w-[240px] snap-start bg-slate-900 rounded-xl overflow-hidden border border-slate-800 hover:border-pink-500/50 transition-all duration-300 group flex flex-col cursor-pointer"
+                    className="min-w-[200px] max-w-[200px] sm:min-w-[240px] sm:max-w-[240px] snap-start bg-white dark:bg-slate-900 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 hover:border-pink-500/50 shadow-sm dark:shadow-none hover:shadow-md transition-all duration-300 group flex flex-col cursor-pointer"
                   >
-                    <div className="relative h-56 sm:h-64 overflow-hidden bg-slate-800">
+                    <div className="relative h-56 sm:h-64 overflow-hidden bg-slate-100 dark:bg-slate-800">
                       <img 
                         src={product.img} 
                         alt={product.name} 
@@ -245,12 +245,12 @@ export default function DynamicShelf() {
                     </div>
                     
                     <div className="p-4 flex flex-col flex-1">
-                      <h4 className="font-bold text-slate-200 text-sm line-clamp-2 group-hover:text-pink-400 transition leading-snug" title={product.name}>
+                      <h4 className="font-bold text-slate-800 dark:text-slate-200 text-sm line-clamp-2 group-hover:text-pink-500 transition leading-snug" title={product.name}>
                         {product.name}
                       </h4>
                       
                       <div className="mt-auto pt-3 flex items-baseline gap-2">
-                        <span className="text-lg font-bold text-slate-100">₹{product.price}</span>
+                        <span className="text-lg font-bold text-slate-900 dark:text-slate-100">₹{product.price}</span>
                         {product.price < product.mrp && (
                           <span className="text-xs text-slate-500 mx-1 line-through">₹{product.mrp}</span>
                         )}

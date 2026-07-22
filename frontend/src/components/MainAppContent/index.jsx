@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useNavigate } from 'react-router-dom';
-import { ShoppingBag, MapPin, User as UserIcon, LogOut, Sun, CloudRain, ThermometerSnowflake, Search, UserCircle, BadgeCheck } from 'lucide-react';
+import { ShoppingBag, MapPin, User as UserIcon, LogOut, Sun, Moon, CloudRain, ThermometerSnowflake, Search, UserCircle, BadgeCheck } from 'lucide-react';
 import { fetchCities } from '../../services/api';
 import DynamicShelf from '../DynamicShelf';
 import CheckoutModal from '../Checkout';
@@ -540,7 +540,7 @@ const Shelf = ({ title, products, isLocalShelf = false, noLocalSellers = false, 
                 </div>
               )}
               {p.verifiedSeller && (
-                <div className="inline-flex items-center gap-1 text-[10px] font-bold text-sky-300 bg-sky-950/40 border border-sky-800/50 px-2 py-0.5 rounded-full mb-2 w-fit">
+                <div className="inline-flex items-center gap-1 text-[10px] font-bold text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800/50 px-2 py-0.5 rounded-full mb-2 w-fit">
                   <BadgeCheck className="w-3 h-3" /> Verified Local Seller
                 </div>
               )}
