@@ -9,7 +9,7 @@ import SearchableSelect from './SearchableSelect';
 export default function Signup() {
   const { register, error, setError } = useAuth();
   const navigate = useNavigate();
-  
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -58,13 +58,13 @@ export default function Signup() {
       if (data && data[0] && data[0].Status === "Success" && data[0].PostOffice && data[0].PostOffice.length > 0) {
         const fullStateName = states.find(s => s.value === state)?.label || state;
         const matchedState = data[0].PostOffice[0].State;
-        
+
         if (matchedState.toLowerCase().includes(fullStateName.toLowerCase()) || fullStateName.toLowerCase().includes(matchedState.toLowerCase())) {
-           setPinStatus('success');
-           setPinMsg(`Verified: ${data[0].PostOffice[0].District}`);
+          setPinStatus('success');
+          setPinMsg(`Verified: ${data[0].PostOffice[0].District}`);
         } else {
-           setPinStatus('error');
-           setPinMsg(`Mismatch: Belongs to ${matchedState}`);
+          setPinStatus('error');
+          setPinMsg(`Mismatch: Belongs to ${matchedState}`);
         }
       } else {
         setPinStatus('error');
@@ -102,7 +102,7 @@ export default function Signup() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    
+
     if (email.length < 5 || !email.includes('@')) {
       setError('Please enter a valid email address');
       return;
@@ -135,8 +135,8 @@ export default function Signup() {
       const userData = { email, password, role, name, city: finalCity, state: fullStateName, gender, pincode };
       if (role === 'SELLER') {
         Object.assign(userData, {
-          mobileNumber, businessType, businessName, gstNumber, 
-          yearsInBusiness: yearsInBusiness ? parseInt(yearsInBusiness, 10) : null, 
+          mobileNumber, businessType, businessName, gstNumber,
+          yearsInBusiness: yearsInBusiness ? parseInt(yearsInBusiness, 10) : null,
           primaryProduct
         });
       }
@@ -150,31 +150,31 @@ export default function Signup() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex justify-center items-center p-4 sm:p-6 md:p-8 font-sans relative overflow-hidden">
-      
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors flex justify-center items-center p-4 sm:p-6 md:p-8 font-sans relative overflow-hidden">
+
       <div className="absolute top-1/4 left-1/4 w-80 h-80 bg-pink-700/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-purple-750/10 rounded-full blur-3xl pointer-events-none" />
-      
-      <div className="max-w-4xl w-full bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl flex flex-col md:flex-row z-10">
-        
+
+      <div className="max-w-4xl w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 transition-colors rounded-2xl overflow-hidden shadow-2xl flex flex-col md:flex-row z-10">
+
         {/* Left Pane */}
-        <div className="md:w-1/2 bg-gradient-to-br from-pink-950/70 via-purple-950/60 to-slate-900 p-8 sm:p-12 flex flex-col justify-between border-b md:border-b-0 md:border-r border-slate-850 relative">
-          
-          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
-          
+        <div className="md:w-1/2 bg-gradient-to-br from-pink-50/70 via-purple-50/60 to-slate-100 dark:from-pink-950/70 dark:via-purple-950/60 dark:to-slate-900 transition-colors p-8 sm:p-12 flex flex-col justify-between border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-850 relative">
+
+          <div className="absolute inset-0 bg-[linear-gradient(rgba(0,0,0,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,0.03)_1px,transparent_1px)] dark:bg-[linear-gradient(rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
+
           <div className="relative space-y-8">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-gradient-to-r from-pink-500 to-rose-500 rounded-xl text-white shadow-lg shadow-pink-650/20">
                 <ShoppingBag className="w-5 h-5 animate-pulse" />
               </div>
-              <span className="text-lg font-bold tracking-tight text-white">Bharat AI</span>
+              <span className="text-lg font-bold tracking-tight text-slate-900 dark:text-white transition-colors">Bharat AI</span>
             </div>
-            
+
             <div className="space-y-4">
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-pink-400 via-rose-350 to-purple-400 leading-tight">
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-pink-600 via-rose-500 to-purple-600 dark:from-pink-400 dark:via-rose-350 dark:to-purple-400 leading-tight">
                 India's Next 100 Million Smart Fashion Shoppers
               </h2>
-              <p className="text-xs text-slate-400 leading-relaxed">
+              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed transition-colors">
                 Hyperlocal. Quality-focused. Budget-conscious. We build the digital shelf that aligns personalized style preferences directly with regional climates and community trends.
               </p>
             </div>
@@ -183,46 +183,43 @@ export default function Signup() {
               <div className="flex items-start gap-3">
                 <span className="p-1 bg-pink-500/10 text-pink-400 rounded-lg mt-0.5"><Sparkles className="w-3.5 h-3.5" /></span>
                 <div>
-                  <h4 className="text-xs font-bold text-slate-200">Hyperlocal relevance matching</h4>
-                  <p className="text-[10px] text-slate-450 mt-0.5">Adapt recommendations to localized climates and active festivals instantly.</p>
+                  <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200">Hyperlocal relevance matching</h4>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-450 mt-0.5">Adapt recommendations to localized climates and active festivals instantly.</p>
                 </div>
               </div>
-              
+
               <div className="flex items-start gap-3">
                 <span className="p-1 bg-purple-500/10 text-purple-400 rounded-lg mt-0.5"><DollarSign className="w-3.5 h-3.5" /></span>
                 <div>
-                  <h4 className="text-xs font-bold text-slate-200">Bayesian personal budget shelf</h4>
-                  <p className="text-[10px] text-slate-450 mt-0.5">Smart ratings weighting mechanism that matches high-quality item discoveries under price ceilings.</p>
+                  <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200">Bayesian personal budget shelf</h4>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-450 mt-0.5">Smart ratings weighting mechanism that matches high-quality item discoveries under price ceilings.</p>
                 </div>
               </div>
-              
+
               <div className="flex items-start gap-3">
                 <span className="p-1 bg-emerald-500/10 text-emerald-430 rounded-lg mt-0.5"><TrendingUp className="w-3.5 h-3.5" /></span>
                 <div>
-                  <h4 className="text-xs font-bold text-slate-200">Social-proof trending aggregates</h4>
-                  <p className="text-[10px] text-slate-455 mt-0.5">See what is selling hot in Coimbatore, Vizag, Patna and Belgaum in real-time.</p>
+                  <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200">Social-proof trending aggregates</h4>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-455 mt-0.5">See what is selling hot in Coimbatore, Vizag, Patna and Belgaum in real-time.</p>
                 </div>
               </div>
             </div>
           </div>
-          
-          <div className="mt-8 text-[10px] text-slate-500 flex items-center gap-1.5 border-t border-slate-800/60 pt-4 relative">
-            <Shield className="w-3.5 h-3.5 text-pink-500" />
-            Hyperlocal Fashion Storefront Core Sandbox v2.0
-          </div>
+
+
         </div>
 
         {/* Right Pane: Login Form Card */}
-        <div className="md:w-1/2 p-8 sm:p-12 flex flex-col justify-center bg-slate-900/50">
-          
-          <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-850 mb-6">
-            <Link 
+        <div className="md:w-1/2 p-8 sm:p-12 flex flex-col justify-center bg-slate-50/50 dark:bg-slate-900/50 transition-colors">
+
+          <div className="flex bg-slate-100 dark:bg-slate-950 p-1 rounded-xl border border-slate-200 dark:border-slate-850 transition-colors mb-6">
+            <Link
               to="/login"
-              className="flex-1 text-center py-2 text-xs font-semibold rounded-lg transition-all duration-200 text-slate-400 hover:text-slate-200"
+              className="flex-1 text-center py-2 text-xs font-semibold rounded-lg transition-all duration-200 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
             >
               Sign In
             </Link>
-            <Link 
+            <Link
               to="/register"
               className="flex-1 text-center py-2 text-xs font-semibold rounded-lg transition-all duration-200 bg-gradient-to-r from-pink-600 to-purple-650 text-white shadow"
             >
@@ -232,8 +229,8 @@ export default function Signup() {
 
           <div className="space-y-6">
             <div>
-              <h3 className="text-lg font-bold text-slate-100">Create your account</h3>
-              <p className="text-xs text-slate-400 mt-1">Enter credentials and start discovery</p>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 transition-colors">Create your account</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Enter credentials and start discovery</p>
             </div>
 
             {error && (
@@ -244,15 +241,15 @@ export default function Signup() {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-1.5">
-                <label className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Email Address</label>
+                <label className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest">Email Address</label>
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500">
                     <Smartphone className="w-4 h-4" />
                   </span>
-                  <input 
-                    type="email" 
+                  <input
+                    type="email"
                     placeholder="yourname@domain.com"
-                    className="w-full bg-slate-950 text-slate-100 border border-slate-700/60 focus:border-pink-500 rounded-xl py-2.5 pl-10 pr-4 text-xs focus:outline-none transition-all duration-200 focus:ring-1 focus:ring-pink-500"
+                    className="w-full bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700/60 focus:border-pink-500 dark:focus:border-pink-500 rounded-xl py-2.5 pl-10 pr-4 text-xs focus:outline-none transition-all duration-200 focus:ring-1 focus:ring-pink-500"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -261,15 +258,15 @@ export default function Signup() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Password</label>
+                <label className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest">Password</label>
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500">
                     <Lock className="w-4 h-4" />
                   </span>
-                  <input 
-                    type="password" 
+                  <input
+                    type="password"
                     placeholder="Enter secure password"
-                    className="w-full bg-slate-950 text-slate-100 border border-slate-700/60 focus:border-pink-500 rounded-xl py-2.5 pl-10 pr-4 text-xs focus:outline-none transition-all duration-200 focus:ring-1 focus:ring-pink-500"
+                    className="w-full bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700/60 focus:border-pink-500 dark:focus:border-pink-500 rounded-xl py-2.5 pl-10 pr-4 text-xs focus:outline-none transition-all duration-200 focus:ring-1 focus:ring-pink-500"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
@@ -279,15 +276,15 @@ export default function Signup() {
 
               <div className="space-y-4">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] text-slate-405 font-bold uppercase tracking-widest">Full Name</label>
+                  <label className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest">Full Name</label>
                   <div className="relative">
                     <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500">
                       <UserIcon className="w-4 h-4" />
                     </span>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       placeholder="Your full name"
-                      className="w-full bg-slate-950 text-slate-100 border border-slate-700/60 focus:border-pink-500 rounded-xl py-2.5 pl-10 pr-4 text-xs focus:outline-none transition-all duration-200 focus:ring-1 focus:ring-pink-500"
+                      className="w-full bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700/60 focus:border-pink-500 dark:focus:border-pink-500 rounded-xl py-2.5 pl-10 pr-4 text-xs focus:outline-none transition-all duration-200 focus:ring-1 focus:ring-pink-500"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       required
@@ -297,11 +294,11 @@ export default function Signup() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-[10px] text-slate-405 font-bold uppercase tracking-widest">Platform Role</label>
-                    <select 
+                    <label className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest">Platform Role</label>
+                    <select
                       value={role}
                       onChange={(e) => setRole(e.target.value)}
-                      className="w-full bg-slate-950 text-slate-100 border border-slate-700/60 focus:border-pink-500 rounded-xl py-2.5 px-3 text-xs focus:outline-none transition-all duration-200 focus:ring-1 focus:ring-pink-500"
+                      className="w-full bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700/60 focus:border-pink-500 dark:focus:border-pink-500 rounded-xl py-2.5 px-3 text-xs focus:outline-none transition-all duration-200 focus:ring-1 focus:ring-pink-500"
                     >
                       <option value="CUSTOMER" className="bg-slate-900 text-slate-100">Customer</option>
                       <option value="SELLER" className="bg-slate-900 text-slate-100">Seller</option>
@@ -309,11 +306,11 @@ export default function Signup() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-[10px] text-slate-405 font-bold uppercase tracking-widest">Gender</label>
-                    <select 
+                    <label className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest">Gender</label>
+                    <select
                       value={gender}
                       onChange={(e) => setGender(e.target.value)}
-                      className="w-full bg-slate-950 text-slate-100 border border-slate-700/60 focus:border-pink-500 rounded-xl py-2.5 px-3 text-xs focus:outline-none transition-all duration-200 focus:ring-1 focus:ring-pink-500"
+                      className="w-full bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700/60 focus:border-pink-500 dark:focus:border-pink-500 rounded-xl py-2.5 px-3 text-xs focus:outline-none transition-all duration-200 focus:ring-1 focus:ring-pink-500"
                       required
                     >
                       <option value="" disabled className="bg-slate-900 text-slate-400">Select Gender</option>
@@ -328,8 +325,8 @@ export default function Signup() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-[10px] text-slate-405 font-bold uppercase tracking-widest">Active State</label>
-                    <SearchableSelect 
+                    <label className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest">Active State</label>
+                    <SearchableSelect
                       options={states}
                       value={state}
                       onChange={setStateName}
@@ -338,8 +335,8 @@ export default function Signup() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-[10px] text-slate-405 font-bold uppercase tracking-widest">Active City</label>
-                    <SearchableSelect 
+                    <label className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest">Active City</label>
+                    <SearchableSelect
                       options={cities}
                       value={city}
                       onChange={setCityName}
@@ -351,25 +348,25 @@ export default function Signup() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[10px] text-slate-405 font-bold uppercase tracking-widest flex flex-wrap items-center gap-2">
+                  <label className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest flex flex-wrap items-center gap-2">
                     Postal Pincode *
                     {pinStatus === 'checking' && <span className="text-amber-400 lowercase text-[9px]">Checking...</span>}
                     {pinStatus === 'success' && <span className="text-emerald-400 lowercase text-[9px]">✓ {pinMsg}</span>}
                     {pinStatus === 'error' && <span className="text-rose-400 lowercase text-[9px]">✗ {pinMsg}</span>}
                   </label>
                   <div className="relative">
-                    <input 
-                      type="text" 
-                      placeholder="6-digit Zip code" 
-                      className={`w-full bg-slate-950 text-slate-100 border ${pinStatus === 'error' ? 'border-rose-500/60' : pinStatus === 'success' ? 'border-emerald-500/60' : 'border-slate-700/60'} focus:border-pink-500 rounded-xl py-2.5 px-3 text-xs focus:outline-none transition-all duration-200`}
-                      value={pincode} 
+                    <input
+                      type="text"
+                      placeholder="6-digit Zip code"
+                      className={`w-full bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 border ${pinStatus === 'error' ? 'border-rose-500/60' : pinStatus === 'success' ? 'border-emerald-500/60' : 'border-slate-700/60'} focus:border-pink-500 rounded-xl py-2.5 px-3 text-xs focus:outline-none transition-all duration-200`}
+                      value={pincode}
                       onChange={(e) => {
                         setPincode(e.target.value);
                         if (e.target.value.length === 6) validatePincode(e.target.value);
                         else setPinStatus('idle');
-                      }} 
+                      }}
                       onBlur={() => validatePincode(pincode)}
-                      required 
+                      required
                     />
                   </div>
                 </div>
@@ -377,10 +374,10 @@ export default function Signup() {
                 {city === 'OTHERS' && (
                   <div className="space-y-1.5 bg-slate-900/80 p-3 rounded-xl border border-slate-800">
                     <label className="text-[10px] text-pink-400 font-bold uppercase tracking-widest">Enter your town</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       placeholder="Type your town name"
-                      className="w-full bg-slate-950 text-slate-100 border border-slate-700/60 focus:border-pink-500 rounded-lg py-2 px-3 text-xs focus:outline-none transition-all duration-200"
+                      className="w-full bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700/60 focus:border-pink-500 dark:focus:border-pink-500 rounded-lg py-2 px-3 text-xs focus:outline-none transition-all duration-200"
                       value={customTown}
                       onChange={(e) => setCustomTown(e.target.value)}
                       required
@@ -388,7 +385,7 @@ export default function Signup() {
                     {suggestedTown && (
                       <div className="mt-2 text-xs text-slate-400 flex items-center justify-between">
                         <span>Did you mean <strong className="text-pink-400">{suggestedTown}</strong>?</span>
-                        <button 
+                        <button
                           type="button"
                           onClick={() => {
                             setCityName(suggestedTown);
@@ -406,15 +403,15 @@ export default function Signup() {
                 {role === 'SELLER' && (
                   <div className="space-y-4 pt-4 mt-4 border-t border-slate-800/80">
                     <h4 className="text-xs font-bold text-pink-400 uppercase tracking-wider mb-2">Business Details (Onboarding)</h4>
-                    
+
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-1.5">
-                        <label className="text-[10px] text-slate-405 font-bold uppercase tracking-widest">Mobile Number *</label>
-                        <input type="tel" placeholder="Enter mobile number" className="w-full bg-slate-950 text-slate-100 border border-slate-700/60 focus:border-pink-500 rounded-xl py-2 px-3 text-xs focus:outline-none" value={mobileNumber} onChange={(e) => setMobileNumber(e.target.value)} required />
+                        <label className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest">Mobile Number *</label>
+                        <input type="tel" placeholder="Enter mobile number" className="w-full bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700/60 focus:border-pink-500 dark:focus:border-pink-500 rounded-xl py-2 px-3 text-xs focus:outline-none" value={mobileNumber} onChange={(e) => setMobileNumber(e.target.value)} required />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="text-[10px] text-slate-405 font-bold uppercase tracking-widest">Business Type *</label>
-                        <select className="w-full bg-slate-950 text-slate-100 border border-slate-700/60 focus:border-pink-500 rounded-xl py-2 px-3 text-xs focus:outline-none" value={businessType} onChange={(e) => setBusinessType(e.target.value)} required>
+                        <label className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest">Business Type *</label>
+                        <select className="w-full bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700/60 focus:border-pink-500 dark:focus:border-pink-500 rounded-xl py-2 px-3 text-xs focus:outline-none" value={businessType} onChange={(e) => setBusinessType(e.target.value)} required>
                           <option value="">Select Type</option>
                           <option value="Registered Brand">Registered Brand</option>
                           <option value="Local Shop">Local Shop</option>
@@ -427,31 +424,31 @@ export default function Signup() {
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-1.5">
-                        <label className="text-[10px] text-slate-405 font-bold uppercase tracking-widest">Business / Shop Name *</label>
-                        <input type="text" placeholder="Business Name" className="w-full bg-slate-950 text-slate-100 border border-slate-700/60 focus:border-pink-500 rounded-xl py-2 px-3 text-xs focus:outline-none" value={businessName} onChange={(e) => setBusinessName(e.target.value)} required />
+                        <label className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest">Business / Shop Name *</label>
+                        <input type="text" placeholder="Business Name" className="w-full bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700/60 focus:border-pink-500 dark:focus:border-pink-500 rounded-xl py-2 px-3 text-xs focus:outline-none" value={businessName} onChange={(e) => setBusinessName(e.target.value)} required />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="text-[10px] text-slate-405 font-bold uppercase tracking-widest">Primary Product *</label>
-                        <input type="text" placeholder="e.g. Ethnic, Footwear" className="w-full bg-slate-950 text-slate-100 border border-slate-700/60 focus:border-pink-500 rounded-xl py-2 px-3 text-xs focus:outline-none" value={primaryProduct} onChange={(e) => setPrimaryProduct(e.target.value)} required />
+                        <label className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest">Primary Product *</label>
+                        <input type="text" placeholder="e.g. Ethnic, Footwear" className="w-full bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700/60 focus:border-pink-500 dark:focus:border-pink-500 rounded-xl py-2 px-3 text-xs focus:outline-none" value={primaryProduct} onChange={(e) => setPrimaryProduct(e.target.value)} required />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-3 gap-4">
                       <div className="space-y-1.5">
-                        <label className="text-[10px] text-slate-405 font-bold uppercase tracking-widest">Years Active *</label>
-                        <input type="number" min="0" placeholder="Yrs" className="w-full bg-slate-950 text-slate-100 border border-slate-700/60 focus:border-pink-500 rounded-xl py-2 px-3 text-xs focus:outline-none" value={yearsInBusiness} onChange={(e) => setYearsInBusiness(e.target.value)} required />
+                        <label className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest">Years Active *</label>
+                        <input type="number" min="0" placeholder="Yrs" className="w-full bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700/60 focus:border-pink-500 dark:focus:border-pink-500 rounded-xl py-2 px-3 text-xs focus:outline-none" value={yearsInBusiness} onChange={(e) => setYearsInBusiness(e.target.value)} required />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="text-[10px] text-slate-405 font-bold uppercase tracking-widest">GST (Optional)</label>
-                        <input type="text" placeholder="GSTIN" className="w-full bg-slate-950 text-slate-100 border border-slate-700/60 focus:border-pink-500 rounded-xl py-2 px-3 text-xs focus:outline-none" value={gstNumber} onChange={(e) => setGstNumber(e.target.value)} />
+                        <label className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest">GST (Optional)</label>
+                        <input type="text" placeholder="GSTIN" className="w-full bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700/60 focus:border-pink-500 dark:focus:border-pink-500 rounded-xl py-2 px-3 text-xs focus:outline-none" value={gstNumber} onChange={(e) => setGstNumber(e.target.value)} />
                       </div>
                     </div>
                   </div>
                 )}
               </div>
 
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 disabled={loading || pinStatus === 'error' || pinStatus === 'checking'}
                 className="w-full bg-gradient-to-r from-pink-650 to-purple-650 text-white font-semibold py-2.5 rounded-xl text-xs hover:shadow-lg transition-all duration-300 disabled:opacity-50 mt-4 active:scale-[0.98]"
               >

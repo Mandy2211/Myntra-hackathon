@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import MainAppContent from './components/MainAppContent';
 import Login from './components/Login';
 import Signup from './components/Signup';
@@ -16,8 +17,8 @@ function AppRoutes() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center font-sans">
-        <p className="animate-pulse tracking-widest text-pink-400 font-bold uppercase">Restoring Session...</p>
+      <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-white flex items-center justify-center font-sans">
+        <p className="animate-pulse tracking-widest text-pink-500 font-bold uppercase">Restoring Session...</p>
       </div>
     );
   }
@@ -69,10 +70,12 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <AppRoutes />
-      </Router>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <Router>
+          <AppRoutes />
+        </Router>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }

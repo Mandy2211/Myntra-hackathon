@@ -92,12 +92,12 @@ export default function UploadForm({ onSuccess }) {
   };
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
-      <div className="flex items-center gap-3 mb-6 pb-6 border-b border-slate-800">
+    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xl">
+      <div className="flex items-center gap-3 mb-6 pb-6 border-b border-slate-200 dark:border-slate-800">
         <div className="p-2 bg-pink-500/10 text-pink-400 rounded-lg"><Plus className="w-5 h-5" /></div>
         <div>
-          <h2 className="text-xl font-bold text-slate-100">Upload New Product</h2>
-          <p className="text-xs text-slate-400 mt-1">Provide basic details. Our AI engine will map climates, regions, and styles automatically.</p>
+          <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">Upload New Product</h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Provide basic details. Our AI engine will map climates, regions, and styles automatically.</p>
         </div>
       </div>
 
@@ -108,48 +108,48 @@ export default function UploadForm({ onSuccess }) {
         {/* Core Info */}
         <div className="grid md:grid-cols-2 gap-6">
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-slate-300 flex items-center gap-2"><Box className="w-3.5 h-3.5 text-pink-400"/> Product Name *</label>
-            <input name="name" value={formData.name} onChange={handleChange} required placeholder="e.g. Women's Pink Cotton Printed Kurta" className="w-full bg-slate-950 border border-slate-800 focus:border-pink-500 rounded-xl px-4 py-2.5 text-sm outline-none text-slate-100 transition-colors" />
+            <label className="text-xs font-semibold text-slate-800 dark:text-slate-300 flex items-center gap-2"><Box className="w-3.5 h-3.5 text-pink-400"/> Product Name *</label>
+            <input name="name" value={formData.name} onChange={handleChange} required placeholder="e.g. Women's Pink Cotton Printed Kurta" className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-pink-500 rounded-xl px-4 py-2.5 text-sm outline-none text-slate-900 dark:text-slate-100 transition-colors" />
           </div>
 
           {/* Pricing */}
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-slate-300">Selling Price *</label>
-              <input name="price" type="number" min="0" value={formData.price} onChange={handleChange} required placeholder="₹" className="w-full bg-slate-950 border border-slate-800 focus:border-pink-500 rounded-xl px-4 py-2.5 text-sm outline-none text-slate-100 transition-colors" />
+              <label className="text-xs font-semibold text-slate-800 dark:text-slate-300">Selling Price *</label>
+              <input name="price" type="number" min="0" value={formData.price} onChange={handleChange} required placeholder="₹" className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-pink-500 rounded-xl px-4 py-2.5 text-sm outline-none text-slate-900 dark:text-slate-100 transition-colors" />
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-slate-300">MRP *</label>
-              <input name="mrp" type="number" min="0" value={formData.mrp} onChange={handleChange} required placeholder="₹" className="w-full bg-slate-950 border border-slate-800 focus:border-pink-500 rounded-xl px-4 py-2.5 text-sm outline-none text-slate-100 transition-colors" />
+              <label className="text-xs font-semibold text-slate-800 dark:text-slate-300">MRP *</label>
+              <input name="mrp" type="number" min="0" value={formData.mrp} onChange={handleChange} required placeholder="₹" className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-pink-500 rounded-xl px-4 py-2.5 text-sm outline-none text-slate-900 dark:text-slate-100 transition-colors" />
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-slate-300">Stock *</label>
-              <input name="stock" type="number" min="0" value={formData.stock} onChange={handleChange} required placeholder="Qty" className="w-full bg-slate-950 border border-slate-800 focus:border-pink-500 rounded-xl px-4 py-2.5 text-sm outline-none text-slate-100 transition-colors" />
+              <label className="text-xs font-semibold text-slate-800 dark:text-slate-300">Stock *</label>
+              <input name="stock" type="number" min="0" value={formData.stock} onChange={handleChange} required placeholder="Qty" className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-pink-500 rounded-xl px-4 py-2.5 text-sm outline-none text-slate-900 dark:text-slate-100 transition-colors" />
             </div>
           </div>
         </div>
 
         {/* Description */}
         <div className="space-y-2">
-          <label className="text-xs font-semibold text-slate-300">Description</label>
-          <textarea name="description" value={formData.description} onChange={handleChange} rows="3" placeholder="Describe the quality, fit, and origin of the product..." className="w-full bg-slate-950 border border-slate-800 focus:border-pink-500 rounded-xl px-4 py-3 text-sm outline-none text-slate-100 transition-colors resize-none" />
+          <label className="text-xs font-semibold text-slate-800 dark:text-slate-300">Description</label>
+          <textarea name="description" value={formData.description} onChange={handleChange} rows="3" placeholder="Describe the quality, fit, and origin of the product..." className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-pink-500 rounded-xl px-4 py-3 text-sm outline-none text-slate-900 dark:text-slate-100 transition-colors resize-none" />
         </div>
 
-        <div className="h-px bg-slate-800 my-6" />
+        <div className="h-px bg-slate-100 dark:bg-slate-800 my-6" />
 
         {/* Categories */}
         <div className="grid md:grid-cols-4 gap-4">
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-slate-300 flex items-center gap-2"><Tag className="w-3.5 h-3.5 text-purple-400"/> Gender</label>
-            <select name="gender" value={formData.gender} onChange={handleChange} className="w-full bg-slate-950 border border-slate-800 focus:border-pink-500 rounded-xl px-3 py-2.5 text-sm outline-none text-slate-100">
+            <label className="text-xs font-semibold text-slate-800 dark:text-slate-300 flex items-center gap-2"><Tag className="w-3.5 h-3.5 text-purple-400"/> Gender</label>
+            <select name="gender" value={formData.gender} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-pink-500 rounded-xl px-3 py-2.5 text-sm outline-none text-slate-900 dark:text-slate-100">
               <option value="Men">Men</option><option value="Women">Women</option><option value="Boys">Boys</option>
               <option value="Girls">Girls</option><option value="Kids">Kids</option><option value="Unisex">Unisex</option>
             </select>
           </div>
           
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-slate-300 flex items-center gap-2"><Layers className="w-3.5 h-3.5 text-blue-400"/> Category</label>
-            <select name="category" value={formData.category} onChange={handleChange} className="w-full bg-slate-950 border border-slate-800 focus:border-pink-500 rounded-xl px-3 py-2.5 text-sm outline-none text-slate-100">
+            <label className="text-xs font-semibold text-slate-800 dark:text-slate-300 flex items-center gap-2"><Layers className="w-3.5 h-3.5 text-blue-400"/> Category</label>
+            <select name="category" value={formData.category} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-pink-500 rounded-xl px-3 py-2.5 text-sm outline-none text-slate-900 dark:text-slate-100">
               <option value="Shirt">Shirt</option><option value="Dress">Dress</option><option value="Kurta">Kurta</option>
               <option value="Top">Top</option><option value="Jeans">Jeans</option><option value="Trouser">Trouser</option>
               <option value="Saree">Saree</option><option value="Shorts">Shorts</option><option value="T-Shirt">T-Shirt</option>
@@ -163,8 +163,8 @@ export default function UploadForm({ onSuccess }) {
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-slate-300 flex items-center gap-2"><Droplets className="w-3.5 h-3.5 text-emerald-400"/> Material</label>
-            <select name="material" value={formData.material} onChange={handleChange} className="w-full bg-slate-950 border border-slate-800 focus:border-pink-500 rounded-xl px-3 py-2.5 text-sm outline-none text-slate-100">
+            <label className="text-xs font-semibold text-slate-800 dark:text-slate-300 flex items-center gap-2"><Droplets className="w-3.5 h-3.5 text-emerald-400"/> Material</label>
+            <select name="material" value={formData.material} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-pink-500 rounded-xl px-3 py-2.5 text-sm outline-none text-slate-900 dark:text-slate-100">
               <option value="Unknown">Unknown</option><option value="Cotton">Cotton</option><option value="Silk">Silk</option>
               <option value="Denim">Denim</option><option value="Georgette">Georgette</option><option value="Leather">Leather</option>
               <option value="Crepe">Crepe</option><option value="Kanjeevaram Silk">Kanjeevaram Silk</option><option value="Banarasi Silk">Banarasi Silk</option>
@@ -174,8 +174,8 @@ export default function UploadForm({ onSuccess }) {
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-slate-300 flex items-center gap-2"><Zap className="w-3.5 h-3.5 text-yellow-400"/> Occasion</label>
-            <select name="occasion" value={formData.occasion} onChange={handleChange} className="w-full bg-slate-950 border border-slate-800 focus:border-pink-500 rounded-xl px-3 py-2.5 text-sm outline-none text-slate-100">
+            <label className="text-xs font-semibold text-slate-800 dark:text-slate-300 flex items-center gap-2"><Zap className="w-3.5 h-3.5 text-yellow-400"/> Occasion</label>
+            <select name="occasion" value={formData.occasion} onChange={handleChange} className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-pink-500 rounded-xl px-3 py-2.5 text-sm outline-none text-slate-900 dark:text-slate-100">
               <option value="Casual">Casual</option>
               <option value="Festival">Festival</option>
               <option value="Sports">Sports</option>
@@ -186,14 +186,14 @@ export default function UploadForm({ onSuccess }) {
           </div>
         </div>
 
-        <div className="h-px bg-slate-800 my-6" />
+        <div className="h-px bg-slate-100 dark:bg-slate-800 my-6" />
 
         {/* Image Upload */}
         <div className="space-y-4">
-          <label className="text-xs font-semibold text-slate-300 flex items-center gap-2">Product Images *</label>
+          <label className="text-xs font-semibold text-slate-800 dark:text-slate-300 flex items-center gap-2">Product Images *</label>
           <div className="flex flex-wrap gap-4">
             {previewUrls.map((url, i) => (
-              <div key={i} className="relative w-24 h-24 rounded-lg overflow-hidden border border-slate-700 group">
+              <div key={i} className="relative w-24 h-24 rounded-lg overflow-hidden border border-slate-300 dark:border-slate-700 group">
                 <img src={url} alt="Preview" className="w-full h-full object-cover" />
                 <button type="button" onClick={() => removeImage(i)} className="absolute top-1 right-1 bg-black/60 p-1 rounded hover:bg-rose-500 transition-colors opacity-0 group-hover:opacity-100">
                   <X className="w-3 h-3 text-white" />
@@ -202,8 +202,8 @@ export default function UploadForm({ onSuccess }) {
             ))}
             
             {images.length < 5 && (
-              <label className="w-24 h-24 rounded-lg border-2 border-dashed border-slate-700 flex flex-col items-center justify-center cursor-pointer hover:border-pink-500 hover:bg-pink-900/10 transition-colors">
-                <Upload className="w-6 h-6 text-slate-400" />
+              <label className="w-24 h-24 rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-700 flex flex-col items-center justify-center cursor-pointer hover:border-pink-500 hover:bg-pink-900/10 transition-colors">
+                <Upload className="w-6 h-6 text-slate-500 dark:text-slate-400" />
                 <span className="text-[10px] text-slate-500 mt-1">Add Image</span>
                 <input type="file" multiple accept="image/*" onChange={handleImageChange} className="hidden" />
               </label>
