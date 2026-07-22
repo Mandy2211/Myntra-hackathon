@@ -90,7 +90,7 @@ export function MarketGapChart({ insights }) {
               cursor={{ fill: isDark ? '#1e293b' : '#f1f5f9' }}
             />
             <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: '12px', color: isDark ? '#94a3b8' : '#64748b' }} />
-            <Bar dataKey="searchVolume" name="Live Searches" fill="#ec4899" radius={[4, 4, 0, 0]} maxBarSize={50} />
+            <Bar dataKey="searchVolume" name="Recently Bought" fill="#ec4899" radius={[4, 4, 0, 0]} maxBarSize={50} />
             <Bar dataKey="availableProducts" name="Local Supply" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={50} />
           </BarChart>
         </ResponsiveContainer>

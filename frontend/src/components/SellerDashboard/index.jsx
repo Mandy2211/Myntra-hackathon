@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { TrendingUp, AlertTriangle, CheckCircle, Search, Activity, Package, Plus, LayoutDashboard, LogOut, Lightbulb, MessageSquare, Star, Shield, Trash2, Clock, Ban } from 'lucide-react';
+import { TrendingUp, AlertTriangle, CheckCircle, Search, Activity, Package, Plus, LayoutDashboard, LogOut, Lightbulb, MessageSquare, Star, Shield, Trash2, Clock, Ban, Download } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import UploadForm from './UploadForm';
 import ProductsTable from './ProductsTable';
@@ -132,11 +132,19 @@ export default function SellerDashboard() {
 
           {activeTab === 'dashboard' && (
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <header className="mb-6">
-                <h2 className="text-2xl font-bold flex items-center gap-2">
-                  <TrendingUp className="text-emerald-400" /> Real-Time Search Gap Analysis
-                </h2>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Live competitive intelligence for {data?.sellerRegion?.city || user?.city}. Upload products that are trending to capture unmatched local demand.</p>
+              <header className="mb-6 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-2xl font-bold flex items-center gap-2">
+                    <TrendingUp className="text-emerald-400" /> Regional Purchase Demand Analysis
+                  </h2>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Intelligence based on actual local purchases in {data?.sellerRegion?.city || user?.city}. Upload products that are trending to capture unmatched local demand.</p>
+                </div>
+                <button
+                  onClick={() => window.open('http://localhost:5000/api/seller/purchases/csv?token=' + sessionStorage.getItem('token'), '_blank')}
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 whitespace-nowrap shadow-md transition-all"
+                >
+                  <Download className="w-4 h-4" /> Download Global CSV
+                </button>
               </header>
 
               <SellerSummary categoryData={data?.marketInsights} />
@@ -217,7 +225,7 @@ function GapCard({ insight }) {
       <div className="grid grid-cols-2 gap-4 mb-6">
         <div>
           <div className="text-3xl font-black text-rose-400">{insight.searchVolume}</div>
-          <div className="text-[10px] text-slate-500 font-bold uppercase mt-1">Live Searches</div>
+          <div className="text-[10px] text-slate-500 font-bold uppercase mt-1">Purchase Volume</div>
         </div>
         <div>
           <div className="text-3xl font-black text-slate-700 dark:text-slate-300">{insight.availableProducts}</div>

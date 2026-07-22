@@ -817,26 +817,61 @@ app.get('/api/seller/dashboard', authenticateToken, requireRole('SELLER'), async
   try {
     const { city, state } = req.user;
 
-    const popularSearches = await prisma.searchQuery.groupBy({
-      by: ['type'],
-      where: { state, type: { not: 'NA' } },
-      _count: { type: true },
-      orderBy: { _count: { type: 'desc' } },
-      take: 6
+    // Fetch recent local purchases
+    const recentPurchases = await prisma.purchase.findMany({
+      where: { stateName: state },
+      include: { Product: true },
+      orderBy: { createdAt: 'desc' },
+      take: 2000
     });
 
-    const marketInsights = await Promise.all(popularSearches.map(async (search) => {
-      const keyword = search.type;
-      const searchVolume = search._count.type;
+    // Group by Occasion + Category + Gender
+    const validKeywords = ['top', 'tops', 'kurti', 'kurta', 'saree', 'sarees', 'jeans', 'necklace', 'perfume', 'dress', 'sandals', 'heels', 'shoes', 'bag'];
+    const purchaseCounts = {};
+    recentPurchases.forEach(p => {
+      if (p.Product) {
+        let occ = p.Product.occasion && p.Product.occasion !== 'NA' ? p.Product.occasion : '';
+        let cat = p.Product.category && p.Product.category !== 'NA' ? p.Product.category : '';
+        let gen = p.Product.gender && p.Product.gender !== 'NA' && p.Product.gender !== 'Unisex' ? p.Product.gender : '';
+        
+        // Remove "Other"
+        occ = occ.replace(/Other/gi, '').trim();
+        cat = cat.replace(/Other/gi, '').trim();
+        
+        const combined = `${occ} ${cat}`.toLowerCase();
+        const hasValidKeyword = validKeywords.some(kw => combined.includes(kw));
+
+        // Enforce women-only categories
+        const womenOnlyKeywords = ['saree', 'sarees', 'kurti', 'kurta', 'top', 'tops', 'heel', 'heels', 'sandal', 'sandals', 'purse', 'purses', 'dress', 'necklace'];
+        if (womenOnlyKeywords.some(kw => combined.includes(kw))) {
+          gen = 'Women';
+        }
+
+        if (hasValidKeyword && (occ || cat)) {
+          const key = `${gen}||${occ}||${cat}`;
+          if (!purchaseCounts[key]) purchaseCounts[key] = { gen, occ, cat, count: 0 };
+          purchaseCounts[key].count += p.quantity;
+        }
+      }
+    });
+
+    const popularTypes = Object.values(purchaseCounts)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 6);
+
+    const marketInsights = await Promise.all(popularTypes.map(async (search) => {
+      const keyword = `${search.gen} ${search.occ} ${search.cat}`.trim().replace(/\s+/g, ' ');
+      const searchVolume = search.count;
+
+      const andConditions = [];
+      if (search.cat) andConditions.push({ category: { contains: search.cat, mode: 'insensitive' } });
+      if (search.occ) andConditions.push({ occasion: { contains: search.occ, mode: 'insensitive' } });
+      if (search.gen) andConditions.push({ gender: search.gen });
 
       const supplyCount = await prisma.product.count({
         where: {
           city: city,
-          OR: [
-            { name: { contains: keyword, mode: 'insensitive' } },
-            { category: { contains: keyword, mode: 'insensitive' } },
-            { macro_category: { contains: keyword, mode: 'insensitive' } }
-          ]
+          AND: andConditions.length > 0 ? andConditions : undefined
         }
       });
 
@@ -863,6 +898,41 @@ app.get('/api/seller/dashboard', authenticateToken, requireRole('SELLER'), async
   } catch (error) {
     console.error('Seller dashboard error:', error);
     res.status(500).json({ error: 'Failed to generate insights' });
+  }
+});
+
+app.get('/api/seller/purchases/csv', async (req, res) => {
+  try {
+    const token = req.query.token;
+    if (!token) return res.status(401).send('Unauthorized');
+    const jwt = require('jsonwebtoken');
+    const userPayload = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret');
+    if (userPayload.role !== 'SELLER' && userPayload.role !== 'ADMIN') return res.status(403).send('Forbidden');
+
+    const globalPurchases = await prisma.purchase.findMany({
+      include: { Product: true },
+      orderBy: { createdAt: 'desc' },
+      take: 5000
+    });
+
+    const headers = ['Date', 'City', 'State', 'Product Category', 'Product Occasion', 'Material', 'Gender', 'Quantity', 'Price At Purchase'];
+    const rows = globalPurchases.map(p => {
+      const date = p.createdAt.toISOString().split('T')[0];
+      const prod = p.Product || {};
+      const cat = (prod.category || 'NA').replace(/,/g, '');
+      const occ = (prod.occasion || 'NA').replace(/,/g, '');
+      const mat = (prod.material || 'NA').replace(/,/g, '');
+      const gender = (prod.gender || 'NA').replace(/,/g, '');
+      return `${date},${p.cityName},${p.stateName},${cat},${occ},${mat},${gender},${p.quantity},${p.priceAtPurchase}`;
+    });
+
+    const csvContent = [headers.join(','), ...rows].join('\n');
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename=global_market_purchases.csv');
+    res.send(csvContent);
+  } catch (err) {
+    console.error('CSV export error:', err);
+    res.status(500).send('Error generating CSV');
   }
 });
 
@@ -1330,14 +1400,22 @@ app.get('/api/admin/sellers', authenticateToken, requireAdmin, async (req, res) 
       }
     });
 
-    const sellersWithStats = await Promise.all(sellers.map(async (seller) => {
+    // Process sequentially to prevent database connection pool exhaustion
+    const sellersWithStats = [];
+    for (const seller of sellers) {
       const productIds = seller.Products.map(p => p.id);
-      const totalReviews = await prisma.review.count({ where: { productId: { in: productIds } } });
-      const complaints = await prisma.review.count({ where: { productId: { in: productIds }, isComplaint: true } });
+      
+      let totalReviews = 0;
+      let complaints = 0;
+      if (productIds.length > 0) {
+        totalReviews = await prisma.review.count({ where: { productId: { in: productIds } } });
+        complaints = await prisma.review.count({ where: { productId: { in: productIds }, isComplaint: true } });
+      }
+
       const complaintRatio = totalReviews > 0 ? Math.round((complaints / totalReviews) * 100) : 0;
       const warningCount = seller.WarningsReceived.filter(w => w.type === 'WARNING').length;
 
-      return {
+      sellersWithStats.push({
         ...seller,
         totalProducts: seller.Products.length,
         totalReviews,
@@ -1346,8 +1424,8 @@ app.get('/api/admin/sellers', authenticateToken, requireAdmin, async (req, res) 
         warningCount,
         canWarn: totalReviews >= 5 && complaintRatio > 20 && warningCount < 2 && !seller.isBlocked,
         canBlock: totalReviews >= 5 && complaintRatio > 40 && !seller.isBlocked
-      };
-    }));
+      });
+    }
 
     res.json({ sellers: sellersWithStats });
   } catch (error) {
