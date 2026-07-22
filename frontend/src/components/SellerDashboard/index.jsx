@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { TrendingUp, AlertTriangle, CheckCircle, Search, Activity, Package, Plus, LayoutDashboard, LogOut, Lightbulb, MessageSquare, Star, Shield, Trash2, Clock, Ban } from 'lucide-react';
+import { useTheme } from '../../context/ThemeContext';
+import { TrendingUp, AlertTriangle, CheckCircle, Search, Activity, Package, Plus, LayoutDashboard, LogOut, Lightbulb, MessageSquare, Star, Shield, Trash2, Clock, Ban, X, ListFilter, ShoppingBag, Sun, Moon, User, Building, Mail, MapPin, ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import UploadForm from './UploadForm';
 import ProductsTable from './ProductsTable';
@@ -10,9 +11,11 @@ import SellerSummary from './seller-summary';
 
 export default function SellerDashboard() {
   const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   // Navigation State
   const [activeTab, setActiveTab] = useState('dashboard'); // dashboard | products | upload | feedback
@@ -48,7 +51,7 @@ export default function SellerDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-50 dark:bg-slate-950 transition-colors flex flex-col items-center justify-center font-sans">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors flex flex-col items-center justify-center font-sans">
         <Activity className="w-12 h-12 text-pink-500 animate-spin mb-4" />
         <h2 className="text-xl font-bold text-slate-800 dark:text-slate-200">Loading Intelligence Engine...</h2>
       </div>
@@ -61,9 +64,104 @@ export default function SellerDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-50 dark:bg-slate-950 transition-colors text-slate-900 dark:text-slate-100 font-sans p-4 sm:p-8">
-      <div className="max-w-7xl mx-auto flex flex-col md:flex-row gap-8">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors text-slate-900 dark:text-slate-100 font-sans flex flex-col">
+      {/* Sticky Top Navbar */}
+      <header className="sticky top-0 z-40 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 sm:px-8 py-3.5 flex items-center justify-between shadow-sm">
+        {/* Left: App Logo & Name */}
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-pink-600 rounded-xl text-white shadow-md shadow-pink-500/20 flex items-center justify-center">
+            <ShoppingBag className="w-5 h-5" />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-rose-400 tracking-tight">
+              Bharat AI
+            </span>
+            <span className="text-[10px] font-bold bg-pink-500/10 text-pink-500 border border-pink-500/20 px-2.5 py-0.5 rounded-full uppercase tracking-wider hidden sm:inline-block">
+              Seller Hub
+            </span>
+          </div>
+        </div>
 
+        {/* Right: Theme Toggle & Profile Details Dropdown */}
+        <div className="flex items-center gap-3">
+          {/* Dark / Light Mode Toggle */}
+          <button
+            onClick={toggleTheme}
+            className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 hover:border-pink-500/50 transition-colors shadow-sm"
+            title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+          >
+            {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-700" />}
+          </button>
+
+          {/* Profile Dropdown (Hover/Click) */}
+          <div 
+            className="relative"
+            onMouseEnter={() => setIsProfileOpen(true)}
+            onMouseLeave={() => setIsProfileOpen(false)}
+          >
+            <button 
+              onClick={() => setIsProfileOpen(!isProfileOpen)}
+              className="flex items-center gap-2.5 p-1.5 pr-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/80 hover:border-pink-500/50 transition-all shadow-sm"
+            >
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-pink-500 to-purple-600 text-white font-bold flex items-center justify-center text-sm shadow-sm">
+                {user?.name ? user.name.charAt(0).toUpperCase() : 'S'}
+              </div>
+              <div className="text-left hidden sm:block">
+                <div className="text-xs font-bold text-slate-800 dark:text-slate-200 line-clamp-1">{user?.name || 'Seller'}</div>
+                <div className="text-[10px] text-slate-400 font-medium line-clamp-1">{user?.city}</div>
+              </div>
+              <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${isProfileOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {/* Profile Dropdown Card (Wrapped in pt-1 container so cursor bridge never breaks) */}
+            {isProfileOpen && (
+              <div className="absolute right-0 top-full pt-1.5 w-72 z-50">
+                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150 text-left">
+                  <div className="flex items-center gap-3 pb-3 mb-3 border-b border-slate-100 dark:border-slate-800">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500 to-purple-600 text-white font-black flex items-center justify-center text-lg shadow-md shrink-0">
+                      {user?.name ? user.name.charAt(0).toUpperCase() : 'S'}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-sm font-bold text-slate-900 dark:text-white truncate">{user?.name || 'Seller'}</div>
+                      <div className="text-xs text-slate-500 dark:text-slate-400 truncate flex items-center gap-1">
+                        <Mail className="w-3 h-3 shrink-0 text-pink-500" /> {user?.email}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 mb-4 text-xs">
+                    {user?.businessName && (
+                      <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+                        <Building className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                        <span className="font-semibold truncate">{user.businessName}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+                      <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                      <span className="font-semibold">{user?.city}, {user?.state}</span>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+                    <button
+                      onClick={() => {
+                        logout();
+                        navigate('/login');
+                      }}
+                      className="w-full py-2.5 px-3 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 border border-rose-200 dark:border-rose-800/60 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 flex items-center justify-center gap-2 transition"
+                    >
+                      <LogOut className="w-3.5 h-3.5" /> Secure Logout
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* Main Layout Area */}
+      <div className="max-w-7xl mx-auto w-full p-4 sm:p-8 flex flex-col md:flex-row gap-8 flex-1">
         {/* Left Sidebar Navigation */}
         <aside className="w-full md:w-64 shrink-0 space-y-6">
           <div>
@@ -111,20 +209,6 @@ export default function SellerDashboard() {
               <MessageSquare className="w-4 h-4" /> Feedback & Alerts
             </button>
           </nav>
-
-          <button onClick={() => navigate('/')} className="block w-full text-center text-xs font-medium text-pink-400 hover:text-pink-300 mt-12 pt-4 pb-2 border-t border-slate-200 dark:border-slate-800">
-            ← Back to Consumer Store
-          </button>
-
-          <button
-            onClick={() => {
-              logout();
-              navigate('/login');
-            }}
-            className="flex items-center justify-center gap-2 w-full text-center text-xs font-medium text-rose-500 hover:text-rose-400 py-2 transition-colors mb-4"
-          >
-            <LogOut className="w-4 h-4" /> Secure Logout
-          </button>
         </aside>
 
         {/* Main Content Area */}
@@ -202,6 +286,7 @@ export default function SellerDashboard() {
 function GapCard({ insight }) {
   const isHighOpportunity = insight.gapScore > 75;
   const isSaturated = insight.gapScore < 30;
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   return (
     <div className={`bg-white dark:bg-slate-900 border ${isHighOpportunity ? 'border-emerald-500/50 shadow-lg shadow-emerald-900/20' : 'border-slate-200 dark:border-slate-800'} rounded-2xl p-6 relative overflow-hidden flex flex-col`}>
@@ -243,7 +328,65 @@ function GapCard({ insight }) {
           {isHighOpportunity ? <CheckCircle className="w-4 h-4 shrink-0 mt-0.5 text-emerald-600 dark:text-emerald-400" /> : <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-500 dark:text-amber-400" />}
           {insight.recommendation}
         </div>
+
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="mt-4 w-full py-2.5 px-3 bg-pink-50 dark:bg-pink-950/40 hover:bg-pink-100 dark:hover:bg-pink-900/60 border border-pink-200 dark:border-pink-800/60 rounded-xl text-xs font-bold text-pink-600 dark:text-pink-300 flex items-center justify-center gap-2 transition shadow-sm hover:shadow"
+        >
+          <ListFilter className="w-4 h-4" /> View Search Breakdown
+        </button>
       </div>
+
+      {/* Specific Search Breakdown Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200 text-left">
+            <button
+              onClick={() => setIsModalOpen(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-2 mb-1">
+              <Search className="w-5 h-5 text-pink-500" />
+              <h4 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-wide">
+                {insight.keyword} Search Breakdown
+              </h4>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-5">
+              Specific phrases consumers typed when searching for <span className="font-semibold text-pink-500 uppercase">{insight.keyword}</span> in your region.
+            </p>
+
+            <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
+              {insight.topQueries?.length > 0 ? (
+                insight.topQueries.map((q, i) => (
+                  <div key={i} className="flex items-center justify-between bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 rounded-xl p-3 text-xs">
+                    <div className="flex items-center gap-2.5 font-medium text-slate-800 dark:text-slate-200">
+                      <span className="w-5 h-5 rounded-full bg-pink-100 dark:bg-pink-900/50 text-pink-600 dark:text-pink-400 text-[10px] font-bold flex items-center justify-center shrink-0">
+                        {i + 1}
+                      </span>
+                      <span className="font-mono text-slate-700 dark:text-slate-300">"{q.query}"</span>
+                    </div>
+                    <span className="bg-pink-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0">
+                      {q.count} {q.count === 1 ? 'search' : 'searches'}
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <p className="text-center py-6 text-xs text-slate-400">No specific phrases recorded yet.</p>
+              )}
+            </div>
+
+            <button
+              onClick={() => setIsModalOpen(false)}
+              className="mt-6 w-full py-2.5 bg-slate-900 dark:bg-slate-100 hover:bg-slate-800 dark:hover:bg-white text-white dark:text-slate-900 rounded-xl text-xs font-bold transition"
+            >
+              Close Breakdown
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

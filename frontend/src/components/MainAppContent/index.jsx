@@ -10,13 +10,21 @@ import MicButton from '../MicButton';
 
 const fetchFallbackPincode = async (cityName) => {
   try {
-    console.log(`[Fallback Ping] Fetching pincode dynamically for: ${cityName}`);
-    const res = await fetch(`https://api.postalpincode.in/postoffice/${cityName}`);
-    const data = await res.json();
-    if (data && data[0] && data[0].Status === "Success" && data[0].PostOffice && data[0].PostOffice.length > 0) {
-      const pin = data[0].PostOffice[0].Pincode;
-      console.log(`[Fallback Ping] Success! Found pincode: ${pin}`);
-      return pin;
+    if (!cityName) return null;
+    // Clean district/urban suffixes e.g. "Bengaluru Urban" -> "Bengaluru" or "Bangalore"
+    const cleanedName = cityName.replace(/\s+(urban|rural|district|division|subdivision|city)/gi, '').trim();
+    console.log(`[Fallback Ping] Fetching pincode dynamically for: ${cityName} (cleaned: ${cleanedName})`);
+    
+    // Try cleaned name first, then fallback to original name
+    for (const nameToTry of [cleanedName, cityName]) {
+      if (!nameToTry) continue;
+      const res = await fetch(`https://api.postalpincode.in/postoffice/${encodeURIComponent(nameToTry)}`);
+      const data = await res.json();
+      if (data && data[0] && data[0].Status === "Success" && data[0].PostOffice && data[0].PostOffice.length > 0) {
+        const pin = data[0].PostOffice[0].Pincode;
+        console.log(`[Fallback Ping] Success! Found pincode: ${pin}`);
+        return pin;
+      }
     }
   } catch (err) {
     console.error("Fallback pincode fetch failed:", err);
@@ -106,7 +114,7 @@ export default function MainAppContent() {
     };
 
     fetchShelves();
-  }, [user?.city, user?.state, user?.gender]);
+  }, [user?.city, user?.state, user?.gender, user?.exactLocation?.addressInfo?.postcode, user?.pincode]);
 
   // Separate effect to update ONLY the budget shelf without reloading the whole page
   useEffect(() => {
@@ -162,7 +170,8 @@ export default function MainAppContent() {
             let finalAddressInfo = { ...data.address };
             
             if (!finalAddressInfo.postcode) {
-              const fallbackPin = await fetchFallbackPincode(detectCity);
+              const localityName = data.address.suburb || data.address.neighbourhood || data.address.city_district || detectCity;
+              const fallbackPin = await fetchFallbackPincode(localityName) || await fetchFallbackPincode(detectCity);
               if (fallbackPin) {
                 finalAddressInfo.postcode = fallbackPin;
               }
@@ -254,14 +263,14 @@ export default function MainAppContent() {
                       value={customCityInput}
                       onChange={(e) => setCustomCityInput(e.target.value)}
                       placeholder="Enter city..."
-                      className="bg-transparent text-sm focus:outline-none text-slate-200 w-36 border-b border-pink-500/50 focus:border-pink-500 pb-0.5"
+                      className="bg-transparent text-sm focus:outline-none text-slate-900 dark:text-slate-200 w-36 border-b border-pink-500/50 focus:border-pink-500 pb-0.5 placeholder:text-slate-400"
                       autoFocus
                     />
-                    <button type="button" onClick={() => { setCustomCityMode(false); setCustomCityInput(''); setSuggestions([]); }} className="text-xs text-slate-400 hover:text-white transition">Cancel</button>
+                    <button type="button" onClick={() => { setCustomCityMode(false); setCustomCityInput(''); setSuggestions([]); }} className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition">Cancel</button>
                     {isSearching && <div className="w-3 h-3 border border-pink-500 border-t-transparent rounded-full animate-spin"></div>}
                   </form>
                   {suggestions.length > 0 && (
-                    <div className="absolute top-full left-0 mt-2 w-64 bg-slate-800 border border-slate-700 rounded-lg shadow-xl shadow-slate-950 z-50 overflow-hidden text-xs max-h-64 overflow-y-auto">
+                    <div className="absolute top-full left-0 mt-2 w-64 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl z-50 overflow-hidden text-xs max-h-64 overflow-y-auto">
                       {suggestions.map((loc) => {
                         const cityName = loc.address?.city || loc.address?.town || loc.address?.state_district || loc.name;
                         return (
@@ -286,10 +295,10 @@ export default function MainAppContent() {
                               setCustomCityInput('');
                               setSuggestions([]);
                             }}
-                            className="p-2 cursor-pointer hover:bg-slate-700 border-b border-slate-700/50 text-slate-200 flex flex-col justify-center"
+                            className="p-2 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 border-b border-slate-100 dark:border-slate-700/50 text-slate-800 dark:text-slate-200 flex flex-col justify-center"
                           >
-                            <span className="font-bold text-pink-400 capitalize">{cityName}</span>
-                            <span className="text-[10px] text-slate-400 truncate">{loc.display_name}</span>
+                            <span className="font-bold text-pink-500 dark:text-pink-400 capitalize">{cityName}</span>
+                            <span className="text-[10px] text-slate-500 dark:text-slate-400 truncate">{loc.display_name}</span>
                           </div>
                         )
                       })}
@@ -299,17 +308,19 @@ export default function MainAppContent() {
               ) : (
                 <div className="flex items-center gap-2">
                   <div className="flex flex-col">
-                    <span className="text-sm font-medium text-slate-900 dark:text-slate-100 min-w-[3rem] px-1 group relative flex items-center">
-                      {user?.city || 'Select city'}
-                    </span>
-                    {user?.exactLocation?.displayName && (
-                      <span className="text-[10px] text-slate-400 px-1 max-w-[220px] truncate" title={user.exactLocation.displayName}>
-                        {user.exactLocation.displayName}
+                    <div className="flex items-center gap-2 px-1">
+                      <span className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                        {user?.city || 'Select city'}
                       </span>
-                    )}
-                    {user?.exactLocation?.addressInfo?.postcode && (
-                      <span className="text-[9px] font-bold text-emerald-400 px-1">
-                        PIN: {user.exactLocation.addressInfo.postcode}
+                      {(user?.exactLocation?.addressInfo?.postcode || user?.pincode) && (
+                        <span className="text-[11px] font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 dark:bg-emerald-500/20 border border-emerald-500/30 px-2 py-0.5 rounded-md shadow-sm">
+                          PIN: {user?.exactLocation?.addressInfo?.postcode || user?.pincode}
+                        </span>
+                      )}
+                    </div>
+                    {user?.exactLocation?.displayName && (
+                      <span className="text-[10px] text-slate-500 dark:text-slate-400 px-1 max-w-[220px] truncate" title={user.exactLocation.displayName}>
+                        {user.exactLocation.displayName}
                       </span>
                     )}
                   </div>
@@ -322,16 +333,16 @@ export default function MainAppContent() {
                         updateCity(e.target.value);
                       }
                     }}
-                    className="bg-transparent text-slate-400 text-xs focus:outline-none cursor-pointer hover:text-slate-200"
+                    className="bg-transparent text-slate-500 dark:text-slate-400 text-xs focus:outline-none cursor-pointer hover:text-slate-900 dark:hover:text-slate-200"
                     title="Change location"
                   >
-                    <option value="" disabled>Change...</option>
+                    <option value="" disabled className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200">Change...</option>
                     {cities.map(c => (
-                      <option key={c.cityName} value={c.cityName} className="bg-slate-900 text-slate-200">
+                      <option key={c.cityName} value={c.cityName} className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200">
                         {c.cityName}
                       </option>
                     ))}
-                    <option value="custom" className="bg-slate-900 text-pink-400 font-bold">+ Custom Search</option>
+                    <option value="custom" className="bg-white dark:bg-slate-900 text-pink-600 dark:text-pink-400 font-bold">+ Custom Search</option>
                   </select>
                 </div>
               )}
@@ -351,7 +362,7 @@ export default function MainAppContent() {
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 text-sm bg-slate-100 dark:bg-slate-850 px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-800 transition-colors">
+            <div className="flex items-center gap-2 text-sm bg-slate-100 dark:bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-800 transition-colors">
               <UserIcon className="w-4 h-4 text-purple-400" />
               <div className="text-right">
                 <p className="font-semibold text-slate-900 dark:text-slate-200 leading-none">{user?.name}</p>

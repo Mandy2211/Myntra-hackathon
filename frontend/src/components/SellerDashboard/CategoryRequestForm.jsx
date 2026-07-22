@@ -162,11 +162,9 @@ export default function CategoryRequestForm() {
               onChange={handleChange}
               className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-slate-800 dark:text-slate-300 focus:outline-none focus:border-purple-500 transition-colors"
             >
-              <option value="Unisex">Unisex / Unassigned</option>
-              <option value="Women">Women</option>
               <option value="Men">Men</option>
-              <option value="Boys">Boys</option>
-              <option value="Girls">Girls</option>
+              <option value="Women">Women</option>
+              <option value="Unisex">Unisex</option>
             </select>
           </div>
         </div>

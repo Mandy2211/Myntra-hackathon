@@ -817,24 +817,36 @@ app.get('/api/seller/dashboard', authenticateToken, requireRole('SELLER'), async
   try {
     const { city, state } = req.user;
 
-    const popularSearches = await prisma.searchQuery.groupBy({
-      by: ['type'],
-      where: { state, type: { not: 'NA' } },
-      _count: { type: true },
-      orderBy: { _count: { type: 'desc' } },
-      take: 6
+    const rawPopularSearches = await prisma.searchQuery.groupBy({
+      by: ['category'],
+      where: { state, category: { not: 'NA' } },
+      _count: { category: true },
+      orderBy: { _count: { category: 'desc' } },
     });
 
+    // Deduplicate and merge any plural / synonym variants (e.g. 'sarees' -> 'saree', 'kurtas' -> 'kurti')
+    const groupedMap = new Map();
+    for (const search of rawPopularSearches) {
+      const normalizedKey = searchIntelligence.normalizeTerm(search.category);
+      const currentCount = groupedMap.get(normalizedKey) || 0;
+      groupedMap.set(normalizedKey, currentCount + search._count.category);
+    }
+
+    const popularSearches = Array.from(groupedMap.entries())
+      .map(([category, count]) => ({ category, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 6);
+
     const marketInsights = await Promise.all(popularSearches.map(async (search) => {
-      const keyword = search.type;
-      const searchVolume = search._count.type;
+      const keyword = search.category;
+      const searchVolume = search.count;
 
       const supplyCount = await prisma.product.count({
         where: {
           city: city,
           OR: [
-            { name: { contains: keyword, mode: 'insensitive' } },
             { category: { contains: keyword, mode: 'insensitive' } },
+            { name: { contains: keyword, mode: 'insensitive' } },
             { macro_category: { contains: keyword, mode: 'insensitive' } }
           ]
         }
@@ -848,14 +860,31 @@ app.get('/api/seller/dashboard', authenticateToken, requireRole('SELLER'), async
         gapScore = Math.min(Math.round((ratio / 10) * 100), 100);
       }
 
+      // Fetch top specific search phrases typed by consumers under this category
+      const topQueries = await prisma.searchQuery.groupBy({
+        by: ['rawQuery'],
+        where: { 
+          state, 
+          category: { equals: keyword, mode: 'insensitive' }
+        },
+        _count: { rawQuery: true },
+        orderBy: { _count: { rawQuery: 'desc' } },
+        take: 5
+      });
+
       return {
         keyword,
+        category: keyword,
         searchVolume,
         availableProducts: supplyCount,
         gapScore,
         recommendation: gapScore > 75
           ? `High demand for '${keyword}' detected in ${city} with critical supply shortage. Add stock immediately!`
-          : `Market is saturated with '${keyword}'. Compete on price or add unique variations.`
+          : `Market is saturated with '${keyword}'. Compete on price or add unique variations.`,
+        topQueries: topQueries.map(q => ({
+          query: q.rawQuery,
+          count: q._count.rawQuery
+        }))
       };
     }));
 
