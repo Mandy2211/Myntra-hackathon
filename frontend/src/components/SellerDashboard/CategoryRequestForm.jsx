@@ -101,13 +101,13 @@ export default function CategoryRequestForm() {
         <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mb-6">
           <CheckCircle2 className="w-10 h-10 text-emerald-400" />
         </div>
-        <h2 className="text-3xl font-bold text-white mb-4">Request Received!</h2>
+        <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-4">Request Received!</h2>
         <p className="text-slate-500 dark:text-slate-400 max-w-md mx-auto mb-8">
           Thank you for helping expand Bharat AI! Our curation team will review your suggested category and sample imagery shortly.
         </p>
         <button 
           onClick={() => setStatus('idle')}
-          className="bg-slate-100 dark:bg-slate-800 hover:bg-slate-700 text-white font-semibold py-3 px-8 rounded-xl transition-all"
+          className="bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 dark:hover:bg-slate-700 text-white font-semibold py-3 px-8 rounded-xl transition-all"
         >
           Submit Another Request
         </button>
@@ -125,7 +125,7 @@ export default function CategoryRequestForm() {
           <Lightbulb className="w-6 h-6 text-purple-400" />
         </div>
         <div>
-          <h2 className="text-2xl font-bold text-white mb-2">Request New Category</h2>
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Request New Category</h2>
           <p className="text-slate-500 dark:text-slate-400 text-sm">Got a unique local product or a hyper-specific category that our AI hasn't cataloged yet? Suggest it below to register it globally.</p>
         </div>
       </div>
@@ -148,7 +148,7 @@ export default function CategoryRequestForm() {
               value={formData.categoryName}
               onChange={handleChange}
               placeholder="e.g. Kalamkari Fabric"
-              className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500 transition-colors placeholder:text-slate-600"
+              className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-purple-500 transition-colors placeholder:text-slate-400 dark:placeholder:text-slate-600"
               required
             />
           </div>
@@ -162,11 +162,9 @@ export default function CategoryRequestForm() {
               onChange={handleChange}
               className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-slate-800 dark:text-slate-300 focus:outline-none focus:border-purple-500 transition-colors"
             >
-              <option value="Unisex">Unisex / Unassigned</option>
-              <option value="Women">Women</option>
               <option value="Men">Men</option>
-              <option value="Boys">Boys</option>
-              <option value="Girls">Girls</option>
+              <option value="Women">Women</option>
+              <option value="Unisex">Unisex</option>
             </select>
           </div>
         </div>
@@ -215,7 +213,7 @@ export default function CategoryRequestForm() {
             value={formData.description}
             onChange={handleChange}
             placeholder="Describe what these items are, what materials are usually used, and why customers search for it..."
-            className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500 transition-colors placeholder:text-slate-600 h-32 resize-none"
+            className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-purple-500 transition-colors placeholder:text-slate-400 dark:placeholder:text-slate-600 h-32 resize-none"
             required
           ></textarea>
         </div>
@@ -258,7 +256,7 @@ export default function CategoryRequestForm() {
       {/* Previously Requested Categories */}
       {pastRequests.length > 0 && (
         <div className="mt-12 pt-8 border-t border-slate-200 dark:border-slate-800 relative z-10">
-          <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-4">
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-4">
             <Clock className="w-5 h-5 text-purple-400" /> Previously Requested
           </h3>
           <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">

@@ -817,61 +817,38 @@ app.get('/api/seller/dashboard', authenticateToken, requireRole('SELLER'), async
   try {
     const { city, state } = req.user;
 
-    // Fetch recent local purchases
-    const recentPurchases = await prisma.purchase.findMany({
-      where: { stateName: state },
-      include: { Product: true },
-      orderBy: { createdAt: 'desc' },
-      take: 2000
+    const rawPopularSearches = await prisma.searchQuery.groupBy({
+      by: ['category'],
+      where: { state, category: { not: 'NA' } },
+      _count: { category: true },
+      orderBy: { _count: { category: 'desc' } },
     });
 
-    // Group by Occasion + Category + Gender
-    const validKeywords = ['top', 'tops', 'kurti', 'kurta', 'saree', 'sarees', 'jeans', 'necklace', 'perfume', 'dress', 'sandals', 'heels', 'shoes', 'bag'];
-    const purchaseCounts = {};
-    recentPurchases.forEach(p => {
-      if (p.Product) {
-        let occ = p.Product.occasion && p.Product.occasion !== 'NA' ? p.Product.occasion : '';
-        let cat = p.Product.category && p.Product.category !== 'NA' ? p.Product.category : '';
-        let gen = p.Product.gender && p.Product.gender !== 'NA' && p.Product.gender !== 'Unisex' ? p.Product.gender : '';
-        
-        // Remove "Other"
-        occ = occ.replace(/Other/gi, '').trim();
-        cat = cat.replace(/Other/gi, '').trim();
-        
-        const combined = `${occ} ${cat}`.toLowerCase();
-        const hasValidKeyword = validKeywords.some(kw => combined.includes(kw));
+    // Deduplicate and merge any plural / synonym variants (e.g. 'sarees' -> 'saree', 'kurtas' -> 'kurti')
+    const groupedMap = new Map();
+    for (const search of rawPopularSearches) {
+      const normalizedKey = searchIntelligence.normalizeTerm(search.category);
+      const currentCount = groupedMap.get(normalizedKey) || 0;
+      groupedMap.set(normalizedKey, currentCount + search._count.category);
+    }
 
-        // Enforce women-only categories
-        const womenOnlyKeywords = ['saree', 'sarees', 'kurti', 'kurta', 'top', 'tops', 'heel', 'heels', 'sandal', 'sandals', 'purse', 'purses', 'dress', 'necklace'];
-        if (womenOnlyKeywords.some(kw => combined.includes(kw))) {
-          gen = 'Women';
-        }
-
-        if (hasValidKeyword && (occ || cat)) {
-          const key = `${gen}||${occ}||${cat}`;
-          if (!purchaseCounts[key]) purchaseCounts[key] = { gen, occ, cat, count: 0 };
-          purchaseCounts[key].count += p.quantity;
-        }
-      }
-    });
-
-    const popularTypes = Object.values(purchaseCounts)
+    const popularSearches = Array.from(groupedMap.entries())
+      .map(([category, count]) => ({ category, count }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 6);
 
-    const marketInsights = await Promise.all(popularTypes.map(async (search) => {
-      const keyword = `${search.gen} ${search.occ} ${search.cat}`.trim().replace(/\s+/g, ' ');
+    const marketInsights = await Promise.all(popularSearches.map(async (search) => {
+      const keyword = search.category;
       const searchVolume = search.count;
-
-      const andConditions = [];
-      if (search.cat) andConditions.push({ category: { contains: search.cat, mode: 'insensitive' } });
-      if (search.occ) andConditions.push({ occasion: { contains: search.occ, mode: 'insensitive' } });
-      if (search.gen) andConditions.push({ gender: search.gen });
 
       const supplyCount = await prisma.product.count({
         where: {
           city: city,
-          AND: andConditions.length > 0 ? andConditions : undefined
+          OR: [
+            { category: { contains: keyword, mode: 'insensitive' } },
+            { name: { contains: keyword, mode: 'insensitive' } },
+            { macro_category: { contains: keyword, mode: 'insensitive' } }
+          ]
         }
       });
 
@@ -883,14 +860,31 @@ app.get('/api/seller/dashboard', authenticateToken, requireRole('SELLER'), async
         gapScore = Math.min(Math.round((ratio / 10) * 100), 100);
       }
 
+      // Fetch top specific search phrases typed by consumers under this category
+      const topQueries = await prisma.searchQuery.groupBy({
+        by: ['rawQuery'],
+        where: { 
+          state, 
+          category: { equals: keyword, mode: 'insensitive' }
+        },
+        _count: { rawQuery: true },
+        orderBy: { _count: { rawQuery: 'desc' } },
+        take: 5
+      });
+
       return {
         keyword,
+        category: keyword,
         searchVolume,
         availableProducts: supplyCount,
         gapScore,
         recommendation: gapScore > 75
           ? `High demand for '${keyword}' detected in ${city} with critical supply shortage. Add stock immediately!`
-          : `Market is saturated with '${keyword}'. Compete on price or add unique variations.`
+          : `Market is saturated with '${keyword}'. Compete on price or add unique variations.`,
+        topQueries: topQueries.map(q => ({
+          query: q.rawQuery,
+          count: q._count.rawQuery
+        }))
       };
     }));
 

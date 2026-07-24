@@ -82,15 +82,15 @@ export default function BudgetShelf({ budget = 2000 }) {
       {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
         <div>
-          <h3 className="text-2xl font-bold text-slate-100 flex items-center gap-2">
-            <TrendingUp className="w-6 h-6 text-violet-400" />
+          <h3 className="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <TrendingUp className="w-6 h-6 text-violet-500 dark:text-violet-400" />
             Smart Budget Picks
           </h3>
           <p className="text-xs text-slate-500 mt-1">
             Bayesian rating smoothing — distrusts low-review items, rewards proven quality
           </p>
           {meta && (
-            <p className="text-[10px] text-slate-600 mt-0.5">
+            <p className="text-[10px] text-slate-500 dark:text-slate-600 mt-0.5">
               Global baseline: C={meta.globalC}★ · m={meta.globalM} votes · {meta.total} results under ₹{budget.toLocaleString('en-IN')}
             </p>
           )}
@@ -101,8 +101,8 @@ export default function BudgetShelf({ budget = 2000 }) {
           onClick={() => setPriceAdjusted(v => !v)}
           className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold border transition-all duration-200 whitespace-nowrap ${
             priceAdjusted
-              ? 'bg-violet-600/20 border-violet-500 text-violet-300'
-              : 'bg-slate-900 border-slate-700 text-slate-400 hover:border-violet-500/50'
+              ? 'bg-violet-600/20 border-violet-500 text-violet-600 dark:text-violet-300'
+              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-violet-500/50'
           }`}
         >
           <Tag className="w-3.5 h-3.5" />
@@ -114,18 +114,18 @@ export default function BudgetShelf({ budget = 2000 }) {
       {loading && (
         <div className="flex items-center justify-center gap-3 py-16">
           <div className="w-8 h-8 border-4 border-violet-500/20 border-t-violet-500 rounded-full animate-spin" />
-          <span className="text-violet-400 text-sm font-semibold animate-pulse">Computing Bayesian scores...</span>
+          <span className="text-violet-500 dark:text-violet-400 text-sm font-semibold animate-pulse">Computing Bayesian scores...</span>
         </div>
       )}
 
       {error && !loading && (
-        <div className="bg-rose-950/20 border border-rose-900/50 rounded-xl p-4 text-rose-400 text-sm text-center">
+        <div className="bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/50 rounded-xl p-4 text-rose-600 dark:text-rose-400 text-sm text-center">
           {error}
         </div>
       )}
 
       {!loading && !error && items.length === 0 && (
-        <div className="text-center py-12 text-slate-500 text-sm bg-slate-900 rounded-2xl border border-slate-800">
+        <div className="text-center py-12 text-slate-500 text-sm bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
           No products found under ₹{budget.toLocaleString('en-IN')}. Try raising the budget above.
         </div>
       )}
@@ -136,7 +136,7 @@ export default function BudgetShelf({ budget = 2000 }) {
           {items.map(item => (
             <div
               key={item.id}
-              className="min-w-[200px] max-w-[200px] sm:min-w-[230px] sm:max-w-[230px] snap-start bg-slate-900 rounded-2xl overflow-hidden border border-slate-800 hover:border-violet-500/40 transition-all duration-300 group flex flex-col relative"
+              className="min-w-[200px] max-w-[200px] sm:min-w-[230px] sm:max-w-[230px] snap-start bg-white dark:bg-slate-900 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 hover:border-violet-500/40 shadow-sm dark:shadow-none transition-all duration-300 group flex flex-col relative"
             >
               {/* Discovery badge */}
               {item.isNew && (
@@ -154,7 +154,7 @@ export default function BudgetShelf({ budget = 2000 }) {
               )}
 
               {/* Image */}
-              <div className="relative h-52 overflow-hidden bg-slate-800">
+              <div className="relative h-52 overflow-hidden bg-slate-100 dark:bg-slate-800">
                 <img
                   src={item.img}
                   alt={item.name}
@@ -175,7 +175,7 @@ export default function BudgetShelf({ budget = 2000 }) {
                   {item.seller || item.brand || item.category || 'Brand'}
                 </div>
                 <h4
-                  className="font-semibold text-sm text-slate-200 line-clamp-2 leading-snug group-hover:text-violet-300 transition mb-2"
+                  className="font-semibold text-sm text-slate-800 dark:text-slate-200 line-clamp-2 leading-snug group-hover:text-violet-500 dark:group-hover:text-violet-300 transition mb-2"
                   title={item.name}
                 >
                   {item.name}
@@ -191,7 +191,7 @@ export default function BudgetShelf({ budget = 2000 }) {
                 </div>
 
                 <div className="mt-auto flex items-baseline gap-2">
-                  <span className="text-base font-black text-slate-100">₹{item.price}</span>
+                  <span className="text-base font-black text-slate-900 dark:text-slate-100">₹{item.price}</span>
                   {item.mrp > item.price && (
                     <span className="text-xs text-slate-600 line-through">₹{item.mrp}</span>
                   )}

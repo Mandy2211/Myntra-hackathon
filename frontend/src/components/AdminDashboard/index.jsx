@@ -219,7 +219,7 @@ export default function AdminDashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-50 dark:bg-slate-950 transition-colors text-slate-900 dark:text-slate-100 font-sans">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors text-slate-900 dark:text-slate-100 font-sans p-4 sm:p-8">
       {/* Toast */}
       {toast && (
         <div className="fixed top-4 right-4 z-50 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white px-5 py-3 rounded-xl shadow-2xl text-sm font-medium animate-bounce-in">

@@ -100,7 +100,7 @@ export default function Login() {
         {/* Right Pane: Login Form Card */}
         <div className="md:w-1/2 p-8 sm:p-12 flex flex-col justify-center bg-slate-50/50 dark:bg-slate-900/50 transition-colors">
 
-          <div className="flex bg-slate-100 dark:bg-slate-950 p-1 rounded-xl border border-slate-200 dark:border-slate-850 mb-6 transition-colors">
+          <div className="flex bg-slate-100 dark:bg-slate-950 p-1 rounded-xl border border-slate-200 dark:border-slate-800 mb-6 transition-colors">
             <Link
               to="/login"
               className="flex-1 text-center py-2 text-xs font-semibold rounded-lg transition-all duration-200 bg-gradient-to-r from-pink-600 to-purple-600 text-white shadow"
@@ -165,7 +165,7 @@ export default function Login() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-gradient-to-r from-pink-650 to-purple-650 text-white font-semibold py-2.5 rounded-xl text-xs hover:shadow-lg transition-all duration-300 disabled:opacity-50 mt-4 active:scale-[0.98]"
+                className="w-full bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white font-bold py-3 rounded-xl text-xs hover:shadow-lg transition-all duration-300 disabled:opacity-50 mt-4 active:scale-[0.98]"
               >
                 {loading ? 'Processing...' : 'Sign In'}
               </button>

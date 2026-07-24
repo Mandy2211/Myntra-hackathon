@@ -159,7 +159,7 @@ export default function UserProfile() {
   const isReviewed = (purchaseId) => myReviews.some(r => r.purchaseId === purchaseId);
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-50 dark:bg-slate-950 transition-colors text-slate-900 dark:text-slate-100 font-sans">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors text-slate-900 dark:text-slate-100 font-sans">
       {/* Header */}
       <header className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 backdrop-blur sticky top-0 z-50 px-4 py-3 sm:px-8 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -211,11 +211,10 @@ export default function UserProfile() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors -mb-px ${
-                activeTab === tab.id
+              className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors -mb-px ${activeTab === tab.id
                   ? 'border-pink-500 text-pink-400'
                   : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-300'
-              }`}
+                }`}
             >
               <tab.icon className="w-4 h-4" /> {tab.label}
             </button>
