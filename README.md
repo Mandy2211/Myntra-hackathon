@@ -1,4 +1,4 @@
-# MynStyle AI 🇮🇳
+# MynStyle AI
 **Full System Workflow**  
 *Myntra Hackathon: Theme 1 (Bharat-First Fashion) + Theme 2 (Speed & Trust)*
 
