@@ -218,10 +218,10 @@ export default function MainAppContent() {
             <ShoppingBag className="w-6 h-6" />
           </div>
           <div className="flex flex-col">
-            <h1 className="text-xl font-bold flex items-center gap-2 leading-none">
+            <h1 className="text-xl font-bold flex items-center gap-2 leading-snug pb-0.5">
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-rose-400">MynStyle AI</span>
             </h1>
-            <span className="text-[10px] sm:text-xs font-semibold text-pink-600 dark:text-pink-400 tracking-wide mt-0.5">Your city. Your shelf. Your style</span>
+            <span className="text-[10px] sm:text-xs font-semibold text-pink-600 dark:text-pink-400 tracking-wide mt-1">Your city. Your shelf. Your style</span>
           </div>
         </div>
 

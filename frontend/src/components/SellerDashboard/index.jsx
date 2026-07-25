@@ -77,14 +77,14 @@ export default function SellerDashboard() {
           </div>
           <div className="flex flex-col">
             <div className="flex items-center gap-2">
-              <span className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-rose-400 tracking-tight leading-none">
+              <span className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-rose-400 tracking-tight leading-snug pb-0.5">
                 MynStyle AI
               </span>
               <span className="text-[10px] font-bold bg-pink-500/10 text-pink-500 border border-pink-500/20 px-2.5 py-0.5 rounded-full uppercase tracking-wider hidden sm:inline-block">
                 Seller Hub
               </span>
             </div>
-            <span className="text-[10px] font-semibold text-pink-600 dark:text-pink-400 tracking-wide mt-0.5">Your city. Your shelf. Your style</span>
+            <span className="text-[10px] font-semibold text-pink-600 dark:text-pink-400 tracking-wide mt-1">Your city. Your shelf. Your style</span>
           </div>
         </div>
 

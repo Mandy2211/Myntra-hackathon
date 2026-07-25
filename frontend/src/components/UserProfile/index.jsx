@@ -170,10 +170,10 @@ export default function UserProfile() {
             <ShoppingBag className="w-5 h-5" />
           </div>
           <div className="flex flex-col">
-            <h1 className="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-rose-400 leading-none">
+            <h1 className="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-rose-400 leading-snug pb-0.5">
               MynStyle AI
             </h1>
-            <span className="text-[10px] font-semibold text-pink-600 dark:text-pink-400 tracking-wide mt-0.5">Your city. Your shelf. Your style</span>
+            <span className="text-[10px] font-semibold text-pink-600 dark:text-pink-400 tracking-wide mt-1">Your city. Your shelf. Your style</span>
           </div>
         </div>
         <button onClick={logout} className="text-xs text-slate-500 dark:text-slate-400 hover:text-rose-400 transition border border-slate-300 dark:border-slate-700 px-3 py-1.5 rounded-lg">

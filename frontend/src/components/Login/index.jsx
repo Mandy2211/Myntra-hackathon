@@ -56,8 +56,8 @@ export default function Login() {
                 <ShoppingBag className="w-5 h-5 animate-pulse" />
               </div>
               <div className="flex flex-col">
-                <span className="text-lg font-bold tracking-tight text-slate-900 dark:text-white transition-colors leading-none">MynStyle AI</span>
-                <span className="text-xs font-semibold text-pink-600 dark:text-pink-400 tracking-wide mt-1">Your city. Your shelf. Your style</span>
+                <span className="text-lg font-bold tracking-tight text-slate-900 dark:text-white transition-colors leading-snug pb-0.5">MynStyle AI</span>
+                <span className="text-xs font-semibold text-pink-600 dark:text-pink-400 tracking-wide mt-1.5">Your city. Your shelf. Your style</span>
               </div>
             </div>
 
