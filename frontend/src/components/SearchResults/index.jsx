@@ -122,27 +122,7 @@ export default function SearchResults() {
           </div>
         )}
 
-        {/* Internal Telemetry Check - Requested to keep for Demo */}
-        <div className="mb-8 inline-block bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 text-left">
-          <p className="text-sm font-semibold text-emerald-400 mb-2">Internal Telemetry Check</p>
-          {loading ? (
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-mono animate-pulse">Extracting intent via LLM...</p>
-          ) : parsed ? (
-            <ul className="text-xs text-slate-500 dark:text-slate-400 space-y-1 font-mono">
-              <li>Category: {parsed.category}</li>
-              <li>Type: {parsed.type}</li>
-              <li>Colour: {parsed.colour}</li>
-              <li>Material: {parsed.material}</li>
-              <li>Gender: {parsed.gender}</li>
-              <li>Occasion: {parsed.occasion}</li>
-              <li>Budget: {parsed.budget}</li>
-              <li>Occupation: {parsed.occupation}</li>
-              <li>Exclusions: {parsed.exclusions?.length ? parsed.exclusions.join(', ') : 'none'}</li>
-            </ul>
-          ) : (
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">No parsed data available.</p>
-          )}
-        </div>
+        {/* Internal Telemetry Check removed per user request */}
 
         {loading ? (
           <div className="text-center py-20 text-slate-500 dark:text-slate-400">Searching...</div>
