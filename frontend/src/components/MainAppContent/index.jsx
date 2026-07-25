@@ -398,16 +398,27 @@ export default function MainAppContent() {
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-8 py-8 flex flex-col gap-6">
 
-        {/* Context bar / Controls */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-sm dark:shadow-xl transition-colors">
-          <div className="flex items-center gap-4">
+        {/* Context bar / Greeting & Weather Forecast */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm dark:shadow-xl transition-colors">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 w-full">
+            <div>
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                Hi, {user?.name || 'Customer'} <span className="inline-block animate-bounce">👋</span>
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                Welcome back! Here is your current weather forecast and personalized style recommendations for <span className="font-semibold text-pink-600 dark:text-pink-400">{user?.city || 'your location'}</span>.
+              </p>
+            </div>
+
             {shelves?.context && (
-              <div className="bg-slate-50 dark:bg-slate-950 px-4 py-2 rounded-xl flex items-center gap-3 border border-slate-200 dark:border-slate-800 transition-colors">
-                {getClimateIcon(shelves.context.climate)}
+              <div className="bg-slate-50 dark:bg-slate-950 px-4 py-3 rounded-xl flex items-center gap-3 border border-slate-200 dark:border-slate-800 transition-colors shrink-0">
+                <div className="p-2 bg-pink-500/10 dark:bg-pink-500/20 rounded-lg">
+                  {getClimateIcon(shelves.context.climate)}
+                </div>
                 <div>
-                  <div className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Current Forecast</div>
-                  <div className="font-medium text-slate-700 dark:text-slate-200">
-                    <span className="font-bold text-slate-900 dark:text-white">{shelves.context.temperature}°C</span>, {shelves.context.climate}
+                  <div className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Weather Forecast</div>
+                  <div className="text-xs font-medium text-slate-700 dark:text-slate-200">
+                    <span className="font-bold text-slate-900 dark:text-white text-sm">{shelves.context.temperature}°C</span>, {shelves.context.climate}
                   </div>
                 </div>
               </div>

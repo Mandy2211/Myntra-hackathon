@@ -42,7 +42,14 @@ export default function ProductsTable({ refreshTrigger }) {
     }
   };
 
-  if (loading) return <div className="p-8 text-center text-slate-500 dark:text-slate-400">Loading products...</div>;
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center p-16 space-y-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl">
+        <div className="w-9 h-9 border-3 border-pink-500 border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold animate-pulse">Fetching inventory...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xl">

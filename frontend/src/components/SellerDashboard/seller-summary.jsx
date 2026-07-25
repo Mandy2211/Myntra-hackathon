@@ -133,8 +133,8 @@ export default function SellerSummary({ categoryData }) {
       </div>
 
       {loading ? (
-        <div className="flex items-center gap-3 text-pink-400 py-3 animate-pulse">
-          <Activity className="w-5 h-5 animate-spin" />
+        <div className="flex items-center gap-3 text-pink-500 dark:text-pink-400 py-3 animate-pulse">
+          <div className="w-5 h-5 border-2 border-pink-500 border-t-transparent rounded-full animate-spin"></div>
           <span className="text-sm font-medium">Generating AI summary in {currentLangLabel}...</span>
         </div>
       ) : (
