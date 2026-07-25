@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Upload, Plus, X, Box, Tag, Layers, Droplets, Zap } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { API_BASE_URL } from '../../config';
 
 export default function UploadForm({ onSuccess }) {
   const { token } = useAuth();
@@ -62,7 +63,7 @@ export default function UploadForm({ onSuccess }) {
       Object.keys(formData).forEach(key => data.append(key, formData[key]));
       images.forEach(img => data.append('images', img));
 
-      const res = await fetch('http://localhost:5000/api/seller/products', {
+      const res = await fetch(`${API_BASE_URL}/seller/products`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`

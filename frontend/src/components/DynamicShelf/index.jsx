@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Sparkles, MapPin, CloudRain, Sun, Cloud, Thermometer, Calendar, Star, Sliders, DollarSign, CloudSnow, Wind } from 'lucide-react';
 import BudgetShelf from '../BudgetShelf';
+import { API_BASE_URL } from '../../config';
 
 export default function DynamicShelf() {
   const { user, token } = useAuth();
@@ -26,7 +27,7 @@ export default function DynamicShelf() {
     const fetchHomepage = async () => {
       setLoading(true);
       try {
-        let url = `http://localhost:5000/api/homepage?minBudget=0&maxBudget=${debouncedBudget}`;
+        let url = `${API_BASE_URL}/homepage?minBudget=0&maxBudget=${debouncedBudget}`;
         if (user?.exactLocation) {
           url += `&lat=${user.exactLocation.lat}&lon=${user.exactLocation.lon}`;
         }
@@ -68,7 +69,7 @@ export default function DynamicShelf() {
 
   const handleBuy = async (productId, cityName, stateName) => {
     try {
-      const res = await fetch("http://localhost:5000/api/purchase", {
+      const res = await fetch(`${API_BASE_URL}/purchase`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ productId, quantity: 1, cityName, stateName }),

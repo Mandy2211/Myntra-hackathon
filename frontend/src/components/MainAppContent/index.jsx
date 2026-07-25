@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { API_BASE_URL } from '../../config';
 import { useTheme } from '../../context/ThemeContext';
 import { useNavigate } from 'react-router-dom';
 import { ShoppingBag, MapPin, User as UserIcon, LogOut, Sun, Moon, CloudRain, ThermometerSnowflake, Search, UserCircle, BadgeCheck } from 'lucide-react';
@@ -99,7 +100,7 @@ export default function MainAppContent() {
         const activePin = user?.exactLocation?.addressInfo?.postcode || user?.pincode;
         if (activePin) queryParams.pincode = activePin;
         const query = new URLSearchParams(queryParams);
-        const res = await fetch(`http://localhost:5000/api/homepage/shelves?${query}`, {
+        const res = await fetch(`${API_BASE_URL}/homepage/shelves?${query}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (res.ok) {
@@ -129,7 +130,7 @@ export default function MainAppContent() {
           budget: debouncedBudget,
           gender: user?.gender || 'Men'
         });
-        const res = await fetch(`http://localhost:5000/api/shelf?${query}`, {
+        const res = await fetch(`${API_BASE_URL}/shelf?${query}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (res.ok) {

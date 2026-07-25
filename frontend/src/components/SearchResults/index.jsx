@@ -4,6 +4,7 @@ import { Search, ArrowLeft, ShoppingBag, Briefcase, X, BadgeCheck } from 'lucide
 import { useAuth } from '../../context/AuthContext';
 import CheckoutModal from '../Checkout';
 import MicButton from '../MicButton';
+import { API_BASE_URL } from '../../config';
 
 export default function SearchResults() {
   const [searchParams] = useSearchParams();
@@ -27,7 +28,8 @@ export default function SearchResults() {
     setLoading(true);
 
     const token = sessionStorage.getItem('token');
-    fetch('http://localhost:5000/api/search', {
+    fetch(`${API_BASE_URL}/search`, {
+
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
