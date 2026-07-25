@@ -55,7 +55,10 @@ export default function Login() {
               <div className="p-2 bg-gradient-to-r from-pink-500 to-rose-500 rounded-xl text-white shadow-lg shadow-pink-650/20">
                 <ShoppingBag className="w-5 h-5 animate-pulse" />
               </div>
-              <span className="text-lg font-bold tracking-tight text-slate-900 dark:text-white transition-colors">Bharat AI</span>
+              <div className="flex flex-col">
+                <span className="text-lg font-bold tracking-tight text-slate-900 dark:text-white transition-colors leading-none">MynStyle AI</span>
+                <span className="text-xs font-semibold text-pink-600 dark:text-pink-400 tracking-wide mt-1">Your city. Your shelf. Your style</span>
+              </div>
             </div>
 
             <div className="space-y-4">
