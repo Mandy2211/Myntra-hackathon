@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Package, Search, Trash2, Edit, Star, CloudRain, Sun, Leaf } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { API_BASE_URL, BACKEND_URL } from '../../config';
 
 export default function ProductsTable({ refreshTrigger }) {
   const { token } = useAuth();
@@ -13,7 +14,7 @@ export default function ProductsTable({ refreshTrigger }) {
 
   const fetchProducts = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/seller/products', {
+      const res = await fetch(`${API_BASE_URL}/seller/products`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -30,10 +31,11 @@ export default function ProductsTable({ refreshTrigger }) {
   const deleteProduct = async (id) => {
     if (!window.confirm('Are you sure you want to delete this product?')) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/seller/products/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/seller/products/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
+
       if (res.ok) {
         setProducts(products.filter(p => p.id !== id));
       }
@@ -90,7 +92,7 @@ export default function ProductsTable({ refreshTrigger }) {
                     <div className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-800 flex-shrink-0 overflow-hidden">
                       {product.images ? (
                         <img 
-                          src={product.images.split(';')[0].startsWith('http') ? product.images.split(';')[0] : `http://localhost:5000${product.images.split(';')[0]}`} 
+                          src={product.images.split(';')[0].startsWith('http') ? product.images.split(';')[0] : `${BACKEND_URL}${product.images.split(';')[0]}`} 
                           alt={product.name} 
                           className="w-full h-full object-cover" 
                         />

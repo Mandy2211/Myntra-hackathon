@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL as API_BASE } from '../../config';
 import {
   User, ShoppingBag, Star, MessageSquare, AlertCircle, ChevronLeft,
   Package, Calendar, MapPin, CheckCircle, XCircle, Clock
 } from 'lucide-react';
 
-const API_BASE = 'http://localhost:5000/api';
 
 function StarRating({ value, onChange, readonly = false }) {
   const [hovered, setHovered] = useState(0);

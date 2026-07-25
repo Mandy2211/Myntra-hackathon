@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { API_BASE_URL } from '../../config';
 import { X, MapPin, Truck, Wallet, CreditCard, CheckCircle, Store } from 'lucide-react';
+
 
 // Estimate delivery window from seller location vs buyer location
 function getDeliveryEta(product, user) {
@@ -38,7 +40,7 @@ export default function CheckoutModal({ product, onClose, onSuccess }) {
     setError('');
     try {
       const token = sessionStorage.getItem('token');
-      const res = await fetch('http://localhost:5000/api/purchase', {
+      const res = await fetch(`${API_BASE_URL}/purchase`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

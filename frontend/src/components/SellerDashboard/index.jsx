@@ -8,6 +8,7 @@ import ProductsTable from './ProductsTable';
 import CategoryRequestForm from './CategoryRequestForm';
 import { SellerTrendChart, SellerCategoryPieChart, MarketGapChart } from './SellerTrendChart';
 import SellerSummary from './seller-summary';
+import { API_BASE_URL } from '../../config';
 
 export default function SellerDashboard() {
   const { user, logout } = useAuth();
@@ -31,7 +32,7 @@ export default function SellerDashboard() {
     const fetchDashboard = async () => {
       try {
         const token = sessionStorage.getItem('token');
-        const res = await fetch('http://localhost:5000/api/seller/dashboard', {
+        const res = await fetch(`${API_BASE_URL}/seller/dashboard`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (res.ok) {
@@ -328,7 +329,7 @@ export default function SellerDashboard() {
                   <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Intelligence based on actual local purchases in {data?.sellerRegion?.city || user?.city}. Upload products that are trending to capture unmatched local demand.</p>
                 </div>
                 <button
-                  onClick={() => window.open('http://localhost:5000/api/seller/purchases/csv?token=' + sessionStorage.getItem('token'), '_blank')}
+                  onClick={() => window.open(`${API_BASE_URL}/seller/purchases/csv?token=` + sessionStorage.getItem('token'), '_blank')}
                   className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 whitespace-nowrap shadow-md transition-all"
                 >
                   <Download className="w-4 h-4" /> Download Global CSV
@@ -511,7 +512,7 @@ function AnalyticsTab() {
     const fetchAnalytics = async () => {
       try {
         const token = sessionStorage.getItem('token');
-        const res = await fetch('http://localhost:5000/api/seller/analytics', {
+        const res = await fetch(`${API_BASE_URL}/seller/analytics`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (res.ok) {
@@ -629,8 +630,8 @@ function FeedbackTab() {
     try {
       const headers = { 'Authorization': `Bearer ${token}` };
       const [fbRes, prodRes] = await Promise.all([
-        fetch('http://localhost:5000/api/seller/feedback', { headers }),
-        fetch('http://localhost:5000/api/seller/products', { headers })
+        fetch(`${API_BASE_URL}/seller/feedback`, { headers }),
+        fetch(`${API_BASE_URL}/seller/products`, { headers })
       ]);
       const fbData = await fbRes.json();
       const prodData = await prodRes.json();
@@ -649,7 +650,7 @@ function FeedbackTab() {
     if (!window.confirm('Delete this product? This cannot be undone.')) return;
     setDeleteLoading(id);
     try {
-      await fetch(`http://localhost:5000/api/seller/products/${id}`, {
+      await fetch(`${API_BASE_URL}/seller/products/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });

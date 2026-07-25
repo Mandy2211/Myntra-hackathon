@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Sparkles, Tag, Star, ShoppingBag, TrendingUp, Zap } from 'lucide-react';
+import { API_BASE_URL } from '../../config';
 
 /**
  * BudgetShelf
@@ -22,7 +23,7 @@ export default function BudgetShelf({ budget = 2000 }) {
     setError(null);
     try {
       const gender = user?.gender || 'Men';
-      const url = `http://localhost:5000/api/shelf?budget=${budget}&gender=${gender}&priceAdjusted=${priceAdjusted}&n=12`;
+      const url = `${API_BASE_URL}/shelf?budget=${budget}&gender=${gender}&priceAdjusted=${priceAdjusted}&n=12`;
       const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to load shelf');
@@ -39,7 +40,7 @@ export default function BudgetShelf({ budget = 2000 }) {
 
   const handleBuy = async (productId) => {
     try {
-      const res = await fetch('http://localhost:5000/api/purchase', {
+      const res = await fetch(`${API_BASE_URL}/purchase`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

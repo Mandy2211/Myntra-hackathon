@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { UploadCloud, CheckCircle2, AlertTriangle, Lightbulb, Clock } from 'lucide-react';
+import { API_BASE_URL } from '../../config';
 
 export default function CategoryRequestForm() {
   const [formData, setFormData] = useState({
@@ -17,7 +18,7 @@ export default function CategoryRequestForm() {
   const fetchPastRequests = async () => {
     try {
       const token = sessionStorage.getItem('token');
-      const res = await fetch('http://localhost:5000/api/seller/category-requests', {
+      const res = await fetch(`${API_BASE_URL}/seller/category-requests`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
@@ -66,7 +67,7 @@ export default function CategoryRequestForm() {
       }
 
       const token = sessionStorage.getItem('token');
-      const res = await fetch('http://localhost:5000/api/seller/category-request', {
+      const res = await fetch(`${API_BASE_URL}/seller/category-request`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
