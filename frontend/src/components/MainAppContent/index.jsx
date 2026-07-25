@@ -14,7 +14,7 @@ const fetchFallbackPincode = async (cityName) => {
     // Clean district/urban suffixes e.g. "Bengaluru Urban" -> "Bengaluru" or "Bangalore"
     const cleanedName = cityName.replace(/\s+(urban|rural|district|division|subdivision|city)/gi, '').trim();
     console.log(`[Fallback Ping] Fetching pincode dynamically for: ${cityName} (cleaned: ${cleanedName})`);
-    
+
     // Try cleaned name first, then fallback to original name
     for (const nameToTry of [cleanedName, cityName]) {
       if (!nameToTry) continue;
@@ -154,7 +154,7 @@ export default function MainAppContent() {
         setLoadingBudgetSlider(false);
       }
     };
-    
+
     fetchBudgetShelfOnly();
   }, [debouncedBudget, user?.gender]);
 
@@ -168,7 +168,7 @@ export default function MainAppContent() {
             const data = await res.json();
             const detectCity = data.address.city || data.address.town || data.address.state_district || "Unknown";
             let finalAddressInfo = { ...data.address };
-            
+
             if (!finalAddressInfo.postcode) {
               const localityName = data.address.suburb || data.address.neighbourhood || data.address.city_district || detectCity;
               const fallbackPin = await fetchFallbackPincode(localityName) || await fetchFallbackPincode(detectCity);
@@ -217,22 +217,23 @@ export default function MainAppContent() {
           <div className="p-2 bg-pink-600 rounded-lg text-white">
             <ShoppingBag className="w-6 h-6" />
           </div>
-          <div>
-            <h1 className="text-xl font-bold flex items-center gap-2">
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-rose-400">Bharat AI</span>
+          <div className="flex flex-col">
+            <h1 className="text-xl font-bold flex items-center gap-2 leading-snug pb-0.5">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-rose-400">MynStyle AI</span>
             </h1>
+            <span className="text-[10px] sm:text-xs font-semibold text-pink-600 dark:text-pink-400 tracking-wide mt-1">Your city. Your shelf. Your style</span>
           </div>
         </div>
 
         <div className="flex-1 max-w-xl mx-4 hidden md:block">
-          <form 
+          <form
             onSubmit={async (e) => {
               e.preventDefault();
-              if(!searchQuery.trim()) return;
+              if (!searchQuery.trim()) return;
               try {
                 // Navigate immediately to the new search results page
                 navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
-              } catch(err) {
+              } catch (err) {
                 console.error('Navigation failed', err);
               }
             }}
@@ -243,7 +244,7 @@ export default function MainAppContent() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search for clothes (e.g., 'Red Velvet Dress')..." 
+              placeholder="Search for clothes (e.g., 'Red Velvet Dress')..."
               className="bg-transparent text-sm focus:outline-none text-slate-900 dark:text-slate-200 w-full placeholder:text-slate-500"
             />
             <MicButton onResult={(text) => { setSearchQuery(text); navigate(`/search?q=${encodeURIComponent(text)}`); }} />
@@ -566,7 +567,7 @@ const Shelf = ({ title, products, isLocalShelf = false, noLocalSellers = false, 
                   <span className="text-[10px] font-bold text-amber-500 dark:text-amber-400">⭐ {p.rating}</span>
                 </div>
               </div>
-              
+
               <button
                 onClick={(e) => {
                   e.stopPropagation();
