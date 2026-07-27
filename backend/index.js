@@ -11,7 +11,7 @@ const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const enrichment = require('./services/enrichment');
 const llmEnrichment = require('./services/llm-enrichment');
 const searchIntelligence = require('./services/search-intelligence');
-const { scoreProduct } = require('./services/office-score');
+const { scoreProduct, detectProfile, profileLabel, getPoolCats } = require('./services/office-score');
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -1536,21 +1536,20 @@ app.post('/api/search', authenticateToken, async (req, res) => {
       },
     });
 
-    // Detect office/work intent up front — it changes how we build the query.
-    const occ = (parsed.occasion || "").toLowerCase();
-    const officeIntent =
-      occ.includes("office") || occ.includes("work") || occ.includes("formal") ||
-      (parsed.occupation && parsed.occupation !== "NA") ||
-      (parsed.exclusions && parsed.exclusions.length > 0);
+    // Detect the occasion profile (office / party / wedding / sports / casual).
+    // "Smart" mode kicks in when we know an occasion OR the user listed exclusions.
+    const profileKey = detectProfile(parsed, rawQuery);
+    const hasExclusions = parsed.exclusions && parsed.exclusions.length > 0;
+    const smartIntent = !!profileKey || hasExclusions;
 
     const where = { status: "Active" };
 
     if (parsed.gender && parsed.gender !== "NA") where.gender = parsed.gender;
-    else if (officeIntent && req.user?.gender) where.gender = req.user.gender;
+    else if (smartIntent && req.user?.gender) where.gender = req.user.gender;
 
-    // Skip the occasion filter for office intent — the catalog rarely tags "office",
-    // so we pull a broad workwear pool and rank it by Office Suitability instead.
-    if (!officeIntent && parsed.occasion && parsed.occasion !== "NA") {
+    // With a known occasion profile we broaden the pool and let the score rank it,
+    // since the catalog rarely tags occasions like "office" or "party" directly.
+    if (!profileKey && parsed.occasion && parsed.occasion !== "NA") {
       where.occasion = { contains: parsed.occasion, mode: "insensitive" };
     }
     if (parsed.material && parsed.material !== "NA") where.material = { contains: parsed.material, mode: "insensitive" };
@@ -1559,16 +1558,26 @@ app.post('/api/search', authenticateToken, async (req, res) => {
     }
 
     const freeTextTerms = [parsed.category, parsed.type, parsed.colour].filter(t => t && t !== "NA");
-    if (freeTextTerms.length) {
+    if (profileKey) {
+      // Known occasion — pull the profile's real catalog categories (the AI's
+      // loose phrasing like "sports wear" rarely matches actual category names),
+      // then let the suitability score rank them.
+      const poolCats = getPoolCats(profileKey);
+      where.OR = poolCats.flatMap(term => [
+        { category: { contains: term, mode: "insensitive" } },
+        { name: { contains: term, mode: "insensitive" } },
+      ]);
+    } else if (freeTextTerms.length) {
       where.OR = freeTextTerms.flatMap(term => [
         { name: { contains: term, mode: "insensitive" } },
         { category: { contains: term, mode: "insensitive" } },
         { ethnic_style: { contains: term, mode: "insensitive" } },
       ]);
-    } else if (officeIntent) {
-      // No specific product named — pull workwear-relevant apparel to score/rank
-      const workwearCats = ['top', 'kurta', 'kurti', 'trouser', 'blazer', 'shirt', 'palazzo', 'dress', 'jeans'];
-      where.OR = workwearCats.flatMap(term => [
+    } else if (smartIntent) {
+      // Exclusions only, no occasion — pull a broad apparel pool to filter
+      const apparelCats = ['top', 'kurta', 'kurti', 'trouser', 'blazer', 'shirt', 'palazzo',
+        'dress', 'jeans', 'saree', 'lehenga', 'skirt', 'tshirt', 't-shirt', 'shorts', 'jacket', 'legging', 'track'];
+      where.OR = apparelCats.flatMap(term => [
         { category: { contains: term, mode: "insensitive" } },
         { name: { contains: term, mode: "insensitive" } },
       ]);
@@ -1577,7 +1586,7 @@ app.post('/api/search', authenticateToken, async (req, res) => {
     let products = await prisma.product.findMany({
       where,
       orderBy: [{ festival_priority: "desc" }, { rating: "desc" }],
-      take: officeIntent ? 120 : 60,
+      take: smartIntent ? 120 : 60,
     });
 
     // Tag verified local sellers (low complaint ratio) when seller products appear
@@ -1589,24 +1598,32 @@ app.post('/api/search', authenticateToken, async (req, res) => {
       }));
     }
 
-    // ── Office-wear intelligence ──────────────────────────────────────────────
-    // Filters out excluded styles and ranks the pool by Office Suitability.
-
-    if (officeIntent) {
+    // ── Smart preference intelligence ─────────────────────────────────────────
+    // Universal: filter out anything the user excluded.
+    // With an occasion profile: also rank by suitability and attach a match score.
+    const label = profileLabel(profileKey);
+    if (smartIntent) {
       products = products
         .map(p => {
-          const { score, reason, blocked } = scoreProduct(p, parsed.exclusions || []);
-          return { ...p, officeScore: score, officeReason: reason, blocked };
+          const { score, reason, blocked } = scoreProduct(p, parsed.exclusions || [], profileKey);
+          return { ...p, matchScore: score, matchReason: reason, blocked };
         })
-        .filter(p => !p.blocked)
-        .sort((a, b) => b.officeScore - a.officeScore)
-        .slice(0, 30)
-        .map(p => ({ ...p, reason: `${p.officeScore}% Office Suitable — ${p.officeReason}` }));
+        .filter(p => !p.blocked);
+
+      if (profileKey) {
+        products = products
+          .sort((a, b) => b.matchScore - a.matchScore)
+          .slice(0, 30)
+          .map(p => ({ ...p, reason: `${p.matchScore}% ${label} Match — ${p.matchReason}` }));
+      } else {
+        // Exclusions only — keep rating order, no score
+        products = products.slice(0, 30);
+      }
     } else {
       products = products.slice(0, 30);
     }
 
-    res.json({ parsed, officeIntent, products });
+    res.json({ parsed, smartIntent, profile: profileKey, profileLabel: label, products });
   } catch (error) {
     console.error('Search API error:', error);
     res.status(500).json({ error: "Failed to perform search" });

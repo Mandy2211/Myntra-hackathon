@@ -14,7 +14,8 @@ export default function SearchResults() {
 
   const [products, setProducts] = useState(null);
   const [parsed, setParsed] = useState(null);
-  const [officeIntent, setOfficeIntent] = useState(false);
+  const [smartIntent, setSmartIntent] = useState(false);
+  const [profileLabel, setProfileLabel] = useState(null);
   const [loading, setLoading] = useState(false);
   const [checkoutProduct, setCheckoutProduct] = useState(null);
 
@@ -41,7 +42,8 @@ export default function SearchResults() {
       .then(data => {
         setProducts(data.products || []);
         setParsed(data.parsed || null);
-        setOfficeIntent(!!data.officeIntent);
+        setSmartIntent(!!data.smartIntent);
+        setProfileLabel(data.profileLabel || null);
       })
       .catch(err => console.error(err))
       .finally(() => setLoading(false));
@@ -100,19 +102,23 @@ export default function SearchResults() {
           Showing results for: <span className="text-pink-400">"{query}"</span>
         </h2>
 
-        {/* Smart Office Wear — shows what the AI understood from the query */}
-        {officeIntent && parsed && (
+        {/* Smart Search — shows what the AI understood from the query */}
+        {smartIntent && parsed && (
           <div className="mb-8 bg-gradient-to-br from-purple-900/30 to-pink-900/20 border border-purple-500/30 rounded-2xl p-5">
             <div className="flex items-center gap-2 mb-3">
               <Briefcase className="w-5 h-5 text-pink-400" />
-              <h3 className="text-lg font-bold text-white">Smart Office Wear</h3>
+              <h3 className="text-lg font-bold text-white">
+                {profileLabel ? `Smart ${profileLabel} Picks` : 'Smart Search'}
+              </h3>
               <span className="text-[10px] font-bold bg-pink-600 text-white px-2 py-0.5 rounded-full uppercase tracking-wider">Beta</span>
             </div>
             <p className="text-sm text-slate-300 mb-3">
               {parsed.occupation && parsed.occupation !== 'NA'
                 ? <>Curated for a <span className="text-emerald-400 font-semibold">{parsed.occupation}</span>. </>
-                : 'Curated for the workplace. '}
-              Ranked every result by an <span className="text-pink-400 font-semibold">Office Suitability Score</span>.
+                : profileLabel ? <>Curated for <span className="text-emerald-400 font-semibold">{profileLabel.toLowerCase()}</span>. </> : ''}
+              {profileLabel
+                ? <>Ranked every result by a <span className="text-pink-400 font-semibold">{profileLabel} Match Score</span>.</>
+                : <>Showing only what fits your preferences.</>}
             </p>
             {parsed.exclusions && parsed.exclusions.length > 0 && (
               <div className="flex flex-wrap items-center gap-2">
@@ -159,12 +165,13 @@ export default function SearchResults() {
                       ⭐ {parseFloat(p.rating).toFixed(1)}
                     </div>
                   )}
-                  {typeof p.officeScore === 'number' && (
-                    <div className={`absolute bottom-2 left-2 flex items-center gap-1 backdrop-blur-sm px-2 py-1 rounded-lg text-[10px] font-bold border ${p.officeScore >= 80 ? 'bg-emerald-950/80 text-emerald-300 border-emerald-800/60'
-                        : p.officeScore >= 60 ? 'bg-amber-950/80 text-amber-300 border-amber-800/60'
-                          : 'bg-slate-950/80 text-slate-300 border-slate-700/60'
-                      }`}>
-                      <Briefcase className="w-3 h-3" /> {p.officeScore}% Office
+                  {typeof p.matchScore === 'number' && (
+                    <div className={`absolute bottom-2 left-2 flex items-center gap-1 backdrop-blur-sm px-2 py-1 rounded-lg text-[10px] font-bold border ${
+                      p.matchScore >= 80 ? 'bg-emerald-950/80 text-emerald-300 border-emerald-800/60'
+                      : p.matchScore >= 60 ? 'bg-amber-950/80 text-amber-300 border-amber-800/60'
+                      : 'bg-slate-950/80 text-slate-300 border-slate-700/60'
+                    }`}>
+                      <Briefcase className="w-3 h-3" /> {p.matchScore}% {profileLabel || 'Match'}
                     </div>
                   )}
                 </div>
