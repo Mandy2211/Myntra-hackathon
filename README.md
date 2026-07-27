@@ -3,7 +3,7 @@
 *Myntra Hackathon: Theme 1 (Bharat-First Fashion) + Theme 2 (Speed & Trust)*
 
 ---
-* 🎥 **Demo Video:** <a href="https://drive.google.com/drive/folders/1TISvE7XfBqzzhcuJxt9G3Blo9nAlLIrE?usp=sharing"><img width="736" height="736" alt="Watch the MynStyle AI Demo" src="https://github.com/user-attachments/assets/f5481693-a1c2-403c-a28f-83d72ea9e3a2" /></a>
+* 🚀 **Live Demo:** https://mynstyle-ai.vercel.app/login
 * 📄 **SRS Document:** [View Software Requirements Specification](https://drive.google.com/file/d/1YFx3p-JkFuNYW_3DRBNECPuy1TD6LaD8/view?usp=sharing)
 ## 📖 Table of Contents
 1. [System Overview](#-system-overview)
