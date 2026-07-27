@@ -13,8 +13,7 @@
 5. [Intelligence Layer](#-intelligence-layer)
 6. [Database Schema](#-database-schema)
 7. [Hackathon Evaluation Framework](#-hackathon-evaluation-framework)
-8. [Competitive Advantages](#-competitive-advantages)
-9. [DEMO and Documentation ( SRS ) ](#DEMOS)
+8. [Advantages](#-advantages)
 
 ---
 
@@ -161,7 +160,7 @@ Its core thesis is that Tier-2 and Tier-3 India has distinct fashion demand patt
 | First-buyer trust signals | Review system with verified-purchase check | ⭐⭐⭐⭐⭐ |
 
 
-## Advantages
+##Advantages
 
 * **End-to-End Vertical:** A fully functional, deployed multi-role platform, not just a mocked demo.
 * **Real Demand Signals:** Real-time logging bridges the gap between local demand and seller supply insights.
