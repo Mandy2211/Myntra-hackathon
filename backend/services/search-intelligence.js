@@ -1,13 +1,23 @@
 const { ChatOpenAI } = require('@langchain/openai');
 const { z } = require('zod');
 
-// Using the same reliable OpenRouter configuration
+// Primary LLM: OpenRouter (Gemma 4 26B — free tier)
 const llm = new ChatOpenAI({
   apiKey: process.env.OPENROUTER_API_KEY,
   configuration: {
     baseURL: 'https://openrouter.ai/api/v1',
   },
   modelName: 'google/gemma-4-26b-a4b-it:free',
+  temperature: 0,
+});
+
+// Fallback LLM: Groq (Llama 3.3 70B — activated when OpenRouter fails)
+const fallbackLlm = new ChatOpenAI({
+  apiKey: process.env.GROQ_API_KEY,
+  configuration: {
+    baseURL: 'https://api.groq.com/openai/v1',
+  },
+  modelName: 'llama-3.3-70b-versatile',
   temperature: 0,
 });
 
@@ -90,25 +100,51 @@ const searchExtractor = llm.withStructuredOutput(searchSchema, {
   name: "searchIntent"
 });
 
+const fallbackSearchExtractor = fallbackLlm.withStructuredOutput(searchSchema, {
+  name: "searchIntent"
+});
+
+const NA_RESULT = { category: "NA", type: "NA", colour: "NA", material: "NA", gender: "NA", occasion: "NA", budget: "NA", occupation: "NA", exclusions: [] };
+
+function formatResult(result) {
+  return {
+    category: normalizeTerm(result.category || "NA"),
+    type: normalizeTerm(result.type || result.category || "NA"),
+    colour: result.colour || "NA",
+    material: result.material || "NA",
+    gender: result.gender || "NA",
+    occasion: result.occasion || "NA",
+    budget: result.budget || "NA",
+    occupation: result.occupation || "NA",
+    exclusions: Array.isArray(result.exclusions) ? result.exclusions : []
+  };
+}
+
 async function parseSearchQuery(rawQuery) {
+  const prompt = `Extract shopping search intent from this raw query: "${rawQuery}". Extract specific fields. Map regional or synonym terms to standard categories (e.g. "cheera" -> "saree", "gown" -> "dress", "sportswear" -> "gym wear"). Capture anything the user says they do NOT want into exclusions (e.g. "no crop tops", "not sleeveless" -> ["crop top","sleeveless"]). If a field is not derivable, strictly output "NA" for that string field and [] for exclusions.`;
+
+  // ── Primary: OpenRouter (Gemma 4) ──────────────────────────────────────────
   try {
-    const prompt = `Extract shopping search intent from this raw query: "${rawQuery}". Extract specific fields. Map regional or synonym terms to standard categories (e.g. "cheera" -> "saree", "gown" -> "dress", "sportswear" -> "gym wear"). Capture anything the user says they do NOT want into exclusions (e.g. "no crop tops", "not sleeveless" -> ["crop top","sleeveless"]). If a field is not derivable, strictly output "NA" for that string field and [] for exclusions.`;
     const result = await searchExtractor.invoke(prompt);
-    return {
-      category: normalizeTerm(result.category || "NA"),
-      type: normalizeTerm(result.type || result.category || "NA"),
-      colour: result.colour || "NA",
-      material: result.material || "NA",
-      gender: result.gender || "NA",
-      occasion: result.occasion || "NA",
-      budget: result.budget || "NA",
-      occupation: result.occupation || "NA",
-      exclusions: Array.isArray(result.exclusions) ? result.exclusions : []
-    };
-  } catch (err) {
-    console.error("LLM Search Parse Error:", err);
-    return { category: "NA", type: "NA", colour: "NA", material: "NA", gender: "NA", occasion: "NA", budget: "NA", occupation: "NA", exclusions: [] };
+    return formatResult(result);
+  } catch (primaryErr) {
+    console.warn('[Search Intelligence] OpenRouter failed, trying Groq fallback...', primaryErr.message);
   }
+
+  // ── Fallback: Groq (Llama 3.3 70B) ────────────────────────────────────────
+  try {
+    if (process.env.GROQ_API_KEY) {
+      const result = await fallbackSearchExtractor.invoke(prompt);
+      console.log('[Search Intelligence] Groq fallback succeeded.');
+      return formatResult(result);
+    }
+    console.warn('[Search Intelligence] Groq fallback skipped — GROQ_API_KEY not set.');
+  } catch (fallbackErr) {
+    console.error('[Search Intelligence] Groq fallback also failed:', fallbackErr.message);
+  }
+
+  // ── Final: return NA defaults — broad product fetch still runs ─────────────
+  return NA_RESULT;
 }
 
 module.exports = {
