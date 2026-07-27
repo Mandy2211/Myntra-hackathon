@@ -111,7 +111,7 @@ export default function Signup() {
       setError('Password must be at least 4 characters');
       return;
     }
-    if (!gender) {
+    if (role !== 'SELLER' && !gender) {
       setError('Please select a gender preference');
       return;
     }
@@ -167,7 +167,10 @@ export default function Signup() {
               <div className="p-2 bg-gradient-to-r from-pink-500 to-rose-500 rounded-xl text-white shadow-lg shadow-pink-650/20">
                 <ShoppingBag className="w-5 h-5 animate-pulse" />
               </div>
-              <span className="text-lg font-bold tracking-tight text-slate-900 dark:text-white transition-colors">Bharat AI</span>
+              <div className="flex flex-col">
+                <span className="text-lg font-bold tracking-tight text-slate-900 dark:text-white transition-colors leading-snug pb-0.5">MynStyle AI</span>
+                <span className="text-xs font-semibold text-pink-600 dark:text-pink-400 tracking-wide mt-1.5">Your city. Your shelf. Your style</span>
+              </div>
             </div>
 
             <div className="space-y-4">
@@ -212,7 +215,7 @@ export default function Signup() {
         {/* Right Pane: Login Form Card */}
         <div className="md:w-1/2 p-8 sm:p-12 flex flex-col justify-center bg-slate-50/50 dark:bg-slate-900/50 transition-colors">
 
-          <div className="flex bg-slate-100 dark:bg-slate-950 p-1 rounded-xl border border-slate-200 dark:border-slate-850 transition-colors mb-6">
+          <div className="flex bg-slate-100 dark:bg-slate-950 p-1 rounded-xl border border-slate-200 dark:border-slate-800 transition-colors mb-6">
             <Link
               to="/login"
               className="flex-1 text-center py-2 text-xs font-semibold rounded-lg transition-all duration-200 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
@@ -234,7 +237,7 @@ export default function Signup() {
             </div>
 
             {error && (
-              <div className="p-3 bg-rose-950/40 border border-rose-900/50 text-rose-455 rounded-lg text-xs leading-relaxed">
+              <div className="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 text-rose-600 dark:text-rose-400 rounded-lg text-xs leading-relaxed">
                 {error}
               </div>
             )}
@@ -293,34 +296,34 @@ export default function Signup() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
+                  <div className={`space-y-1.5 ${role === 'SELLER' ? 'col-span-2' : ''}`}>
                     <label className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest">Platform Role</label>
                     <select
                       value={role}
                       onChange={(e) => setRole(e.target.value)}
                       className="w-full bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700/60 focus:border-pink-500 dark:focus:border-pink-500 rounded-xl py-2.5 px-3 text-xs focus:outline-none transition-all duration-200 focus:ring-1 focus:ring-pink-500"
                     >
-                      <option value="CUSTOMER" className="bg-slate-900 text-slate-100">Customer</option>
-                      <option value="SELLER" className="bg-slate-900 text-slate-100">Seller</option>
+                      <option value="CUSTOMER" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">Customer</option>
+                      <option value="SELLER" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">Seller</option>
                     </select>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest">Gender</label>
-                    <select
-                      value={gender}
-                      onChange={(e) => setGender(e.target.value)}
-                      className="w-full bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700/60 focus:border-pink-500 dark:focus:border-pink-500 rounded-xl py-2.5 px-3 text-xs focus:outline-none transition-all duration-200 focus:ring-1 focus:ring-pink-500"
-                      required
-                    >
-                      <option value="" disabled className="bg-slate-900 text-slate-400">Select Gender</option>
-                      <option value="Men" className="bg-slate-900 text-slate-100">Men</option>
-                      <option value="Women" className="bg-slate-900 text-slate-100">Women</option>
-                      <option value="Unisex" className="bg-slate-900 text-slate-100">Unisex</option>
-                      <option value="Boys" className="bg-slate-900 text-slate-100">Boys</option>
-                      <option value="Girls" className="bg-slate-900 text-slate-100">Girls</option>
-                    </select>
-                  </div>
+                  {role !== 'SELLER' && (
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest">Gender</label>
+                      <select
+                        value={gender}
+                        onChange={(e) => setGender(e.target.value)}
+                        className="w-full bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700/60 focus:border-pink-500 dark:focus:border-pink-500 rounded-xl py-2.5 px-3 text-xs focus:outline-none transition-all duration-200 focus:ring-1 focus:ring-pink-500"
+                        required={role !== 'SELLER'}
+                      >
+                        <option value="" disabled className="bg-slate-900 text-slate-400">Select Gender</option>
+                        <option value="Men" className="bg-slate-900 text-slate-100">Men</option>
+                        <option value="Women" className="bg-slate-900 text-slate-100">Women</option>
+                        <option value="Unisex" className="bg-slate-900 text-slate-100">Unisex</option>
+                      </select>
+                    </div>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -350,15 +353,15 @@ export default function Signup() {
                 <div className="space-y-1.5">
                   <label className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest flex flex-wrap items-center gap-2">
                     Postal Pincode *
-                    {pinStatus === 'checking' && <span className="text-amber-400 lowercase text-[9px]">Checking...</span>}
-                    {pinStatus === 'success' && <span className="text-emerald-400 lowercase text-[9px]">✓ {pinMsg}</span>}
-                    {pinStatus === 'error' && <span className="text-rose-400 lowercase text-[9px]">✗ {pinMsg}</span>}
+                    {pinStatus === 'checking' && <span className="text-amber-500 dark:text-amber-400 lowercase text-[9px]">Checking...</span>}
+                    {pinStatus === 'success' && <span className="text-emerald-600 dark:text-emerald-400 lowercase text-[9px]">✓ {pinMsg}</span>}
+                    {pinStatus === 'error' && <span className="text-rose-600 dark:text-rose-400 lowercase text-[9px]">✗ {pinMsg}</span>}
                   </label>
                   <div className="relative">
                     <input
                       type="text"
                       placeholder="6-digit Zip code"
-                      className={`w-full bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 border ${pinStatus === 'error' ? 'border-rose-500/60' : pinStatus === 'success' ? 'border-emerald-500/60' : 'border-slate-700/60'} focus:border-pink-500 rounded-xl py-2.5 px-3 text-xs focus:outline-none transition-all duration-200`}
+                      className={`w-full bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 border ${pinStatus === 'error' ? 'border-rose-500/60' : pinStatus === 'success' ? 'border-emerald-500/60' : 'border-slate-300 dark:border-slate-700/60'} focus:border-pink-500 rounded-xl py-2.5 px-3 text-xs focus:outline-none transition-all duration-200`}
                       value={pincode}
                       onChange={(e) => {
                         setPincode(e.target.value);
@@ -372,8 +375,8 @@ export default function Signup() {
                 </div>
 
                 {city === 'OTHERS' && (
-                  <div className="space-y-1.5 bg-slate-900/80 p-3 rounded-xl border border-slate-800">
-                    <label className="text-[10px] text-pink-400 font-bold uppercase tracking-widest">Enter your town</label>
+                  <div className="space-y-1.5 bg-slate-100 dark:bg-slate-900/80 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
+                    <label className="text-[10px] text-pink-600 dark:text-pink-400 font-bold uppercase tracking-widest">Enter your town</label>
                     <input
                       type="text"
                       placeholder="Type your town name"
@@ -383,8 +386,8 @@ export default function Signup() {
                       required
                     />
                     {suggestedTown && (
-                      <div className="mt-2 text-xs text-slate-400 flex items-center justify-between">
-                        <span>Did you mean <strong className="text-pink-400">{suggestedTown}</strong>?</span>
+                      <div className="mt-2 text-xs text-slate-600 dark:text-slate-400 flex items-center justify-between">
+                        <span>Did you mean <strong className="text-pink-600 dark:text-pink-400">{suggestedTown}</strong>?</span>
                         <button
                           type="button"
                           onClick={() => {
@@ -392,7 +395,7 @@ export default function Signup() {
                             setCustomTown('');
                             setSuggestedTown('');
                           }}
-                          className="bg-slate-800 hover:bg-slate-700 text-slate-200 px-2 py-1 rounded text-[10px] transition-colors"
+                          className="bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 px-2 py-1 rounded text-[10px] transition-colors"
                         >
                           Yes, select this
                         </button>
@@ -450,9 +453,16 @@ export default function Signup() {
               <button
                 type="submit"
                 disabled={loading || pinStatus === 'error' || pinStatus === 'checking'}
-                className="w-full bg-gradient-to-r from-pink-650 to-purple-650 text-white font-semibold py-2.5 rounded-xl text-xs hover:shadow-lg transition-all duration-300 disabled:opacity-50 mt-4 active:scale-[0.98]"
+                className="w-full bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white font-bold py-3 rounded-xl text-xs hover:shadow-lg transition-all duration-300 disabled:opacity-50 mt-4 active:scale-[0.98] flex items-center justify-center gap-2"
               >
-                {loading ? 'Processing...' : 'Create Account'}
+                {loading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Creating account...</span>
+                  </>
+                ) : (
+                  'Create Account'
+                )}
               </button>
             </form>
           </div>

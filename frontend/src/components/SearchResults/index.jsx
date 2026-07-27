@@ -4,13 +4,14 @@ import { Search, ArrowLeft, ShoppingBag, Briefcase, X, BadgeCheck } from 'lucide
 import { useAuth } from '../../context/AuthContext';
 import CheckoutModal from '../Checkout';
 import MicButton from '../MicButton';
+import { API_BASE_URL } from '../../config';
 
 export default function SearchResults() {
   const [searchParams] = useSearchParams();
   const query = searchParams.get('q');
   const navigate = useNavigate();
   const { user } = useAuth();
-  
+
   const [products, setProducts] = useState(null);
   const [parsed, setParsed] = useState(null);
   const [smartIntent, setSmartIntent] = useState(false);
@@ -26,11 +27,12 @@ export default function SearchResults() {
     lastQuery.current = query;
 
     setLoading(true);
-    
+
     const token = sessionStorage.getItem('token');
-    fetch('http://localhost:5000/api/search', {
+    fetch(`${API_BASE_URL}/search`, {
+
       method: 'POST',
-      headers: { 
+      headers: {
         'Content-Type': 'application/json',
         ...(token ? { 'Authorization': `Bearer ${token}` } : {})
       },
@@ -48,11 +50,11 @@ export default function SearchResults() {
   }, [query, user]);
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-50 dark:bg-slate-950 transition-colors text-slate-900 dark:text-slate-100 font-sans flex flex-col">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors text-slate-900 dark:text-slate-100 font-sans flex flex-col">
       <header className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 backdrop-blur sticky top-0 z-50 px-4 py-3 sm:px-8 flex items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <button 
-            onClick={() => navigate(-1)} 
+          <button
+            onClick={() => navigate(-1)}
             className="p-2 hover:bg-slate-100 dark:bg-slate-800 rounded-full text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-white transition"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -62,29 +64,32 @@ export default function SearchResults() {
               <div className="p-1.5 bg-pink-600 rounded-lg text-slate-900 dark:text-white">
                 <ShoppingBag className="w-5 h-5" />
               </div>
-              <h1 className="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-rose-400 hidden sm:block">
-                Bharat AI
-              </h1>
+              <div className="hidden sm:flex flex-col">
+                <h1 className="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-rose-400 leading-snug pb-0.5">
+                  MynStyle AI
+                </h1>
+                <span className="text-[10px] font-semibold text-pink-600 dark:text-pink-400 tracking-wide mt-1">Your city. Your shelf. Your style</span>
+              </div>
             </Link>
           </div>
         </div>
-        
+
         <div className="flex-1 max-w-xl mx-4">
-          <form 
+          <form
             onSubmit={(e) => {
               e.preventDefault();
               const val = e.target.search.value;
-              if(!val.trim()) return;
+              if (!val.trim()) return;
               navigate(`/search?q=${encodeURIComponent(val)}`);
             }}
             className="flex items-center bg-slate-100 dark:bg-slate-800/80 rounded-full border border-slate-300 dark:border-slate-700 focus-within:border-pink-500/50 px-4 py-2 transition"
           >
             <Search className="w-4 h-4 text-slate-500 dark:text-slate-400 mr-2" />
-            <input 
+            <input
               name="search"
               type="text"
               defaultValue={query || ''}
-              placeholder="Search for clothes..." 
+              placeholder="Search for clothes..."
               className="bg-transparent text-sm focus:outline-none text-slate-800 dark:text-slate-200 w-full placeholder:text-slate-500"
             />
             <MicButton onResult={(text) => navigate(`/search?q=${encodeURIComponent(text)}`)} />
@@ -128,27 +133,7 @@ export default function SearchResults() {
           </div>
         )}
 
-        {/* Internal Telemetry Check - Requested to keep for Demo */}
-        <div className="mb-8 inline-block bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 text-left">
-          <p className="text-sm font-semibold text-emerald-400 mb-2">Internal Telemetry Check</p>
-          {loading ? (
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-mono animate-pulse">Extracting intent via LLM...</p>
-          ) : parsed ? (
-            <ul className="text-xs text-slate-500 dark:text-slate-400 space-y-1 font-mono">
-              <li>Category: {parsed.category}</li>
-              <li>Type: {parsed.type}</li>
-              <li>Colour: {parsed.colour}</li>
-              <li>Material: {parsed.material}</li>
-              <li>Gender: {parsed.gender}</li>
-              <li>Occasion: {parsed.occasion}</li>
-              <li>Budget: {parsed.budget}</li>
-              <li>Occupation: {parsed.occupation}</li>
-              <li>Exclusions: {parsed.exclusions?.length ? parsed.exclusions.join(', ') : 'none'}</li>
-            </ul>
-          ) : (
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">No parsed data available.</p>
-          )}
-        </div>
+        {/* Internal Telemetry Check removed per user request */}
 
         {loading ? (
           <div className="text-center py-20 text-slate-500 dark:text-slate-400">Searching...</div>

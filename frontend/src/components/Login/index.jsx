@@ -55,7 +55,10 @@ export default function Login() {
               <div className="p-2 bg-gradient-to-r from-pink-500 to-rose-500 rounded-xl text-white shadow-lg shadow-pink-650/20">
                 <ShoppingBag className="w-5 h-5 animate-pulse" />
               </div>
-              <span className="text-lg font-bold tracking-tight text-slate-900 dark:text-white transition-colors">Bharat AI</span>
+              <div className="flex flex-col">
+                <span className="text-lg font-bold tracking-tight text-slate-900 dark:text-white transition-colors leading-snug pb-0.5">MynStyle AI</span>
+                <span className="text-xs font-semibold text-pink-600 dark:text-pink-400 tracking-wide mt-1.5">Your city. Your shelf. Your style</span>
+              </div>
             </div>
 
             <div className="space-y-4">
@@ -100,7 +103,7 @@ export default function Login() {
         {/* Right Pane: Login Form Card */}
         <div className="md:w-1/2 p-8 sm:p-12 flex flex-col justify-center bg-slate-50/50 dark:bg-slate-900/50 transition-colors">
 
-          <div className="flex bg-slate-100 dark:bg-slate-950 p-1 rounded-xl border border-slate-200 dark:border-slate-850 mb-6 transition-colors">
+          <div className="flex bg-slate-100 dark:bg-slate-950 p-1 rounded-xl border border-slate-200 dark:border-slate-800 mb-6 transition-colors">
             <Link
               to="/login"
               className="flex-1 text-center py-2 text-xs font-semibold rounded-lg transition-all duration-200 bg-gradient-to-r from-pink-600 to-purple-600 text-white shadow"
@@ -122,7 +125,7 @@ export default function Login() {
             </div>
 
             {error && (
-              <div className="p-3 bg-rose-950/40 border border-rose-900/50 text-rose-455 rounded-lg text-xs leading-relaxed">
+              <div className="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 text-rose-600 dark:text-rose-400 rounded-lg text-xs leading-relaxed">
                 {error}
               </div>
             )}
@@ -165,9 +168,16 @@ export default function Login() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-gradient-to-r from-pink-650 to-purple-650 text-white font-semibold py-2.5 rounded-xl text-xs hover:shadow-lg transition-all duration-300 disabled:opacity-50 mt-4 active:scale-[0.98]"
+                className="w-full bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white font-bold py-3 rounded-xl text-xs hover:shadow-lg transition-all duration-300 disabled:opacity-50 mt-4 active:scale-[0.98] flex items-center justify-center gap-2"
               >
-                {loading ? 'Processing...' : 'Sign In'}
+                {loading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Signing in...</span>
+                  </>
+                ) : (
+                  'Sign In'
+                )}
               </button>
             </form>
           </div>

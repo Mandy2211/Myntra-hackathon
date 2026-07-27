@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL as API_BASE } from '../../config';
 import {
   User, ShoppingBag, Star, MessageSquare, AlertCircle, ChevronLeft,
   Package, Calendar, MapPin, CheckCircle, XCircle, Clock
 } from 'lucide-react';
 
-const API_BASE = 'http://localhost:5000/api';
 
 function StarRating({ value, onChange, readonly = false }) {
   const [hovered, setHovered] = useState(0);
@@ -159,7 +159,7 @@ export default function UserProfile() {
   const isReviewed = (purchaseId) => myReviews.some(r => r.purchaseId === purchaseId);
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-50 dark:bg-slate-950 transition-colors text-slate-900 dark:text-slate-100 font-sans">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors text-slate-900 dark:text-slate-100 font-sans">
       {/* Header */}
       <header className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 backdrop-blur sticky top-0 z-50 px-4 py-3 sm:px-8 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -169,9 +169,12 @@ export default function UserProfile() {
           <div className="p-2 bg-pink-600 rounded-lg text-slate-900 dark:text-white">
             <ShoppingBag className="w-5 h-5" />
           </div>
-          <h1 className="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-rose-400">
-            Bharat AI
-          </h1>
+          <div className="flex flex-col">
+            <h1 className="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-rose-400 leading-snug pb-0.5">
+              MynStyle AI
+            </h1>
+            <span className="text-[10px] font-semibold text-pink-600 dark:text-pink-400 tracking-wide mt-1">Your city. Your shelf. Your style</span>
+          </div>
         </div>
         <button onClick={logout} className="text-xs text-slate-500 dark:text-slate-400 hover:text-rose-400 transition border border-slate-300 dark:border-slate-700 px-3 py-1.5 rounded-lg">
           Logout
@@ -211,11 +214,10 @@ export default function UserProfile() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors -mb-px ${
-                activeTab === tab.id
-                  ? 'border-pink-500 text-pink-400'
-                  : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-300'
-              }`}
+              className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors -mb-px ${activeTab === tab.id
+                ? 'border-pink-500 text-pink-400'
+                : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-300'
+                }`}
             >
               <tab.icon className="w-4 h-4" /> {tab.label}
             </button>

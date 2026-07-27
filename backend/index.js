@@ -481,7 +481,7 @@ app.get('/api/homepage/shelves', async (req, res) => {
     // ── WEATHER PICKS ─────────────────────────────────────────────────────────
     let weatherWhere = {
       climate: climate,
-      gender: { contains: targetGender, mode: 'insensitive' },
+      gender: { in: [targetGender, 'Unisex', 'unisex'] },
       img: { not: '-' },
       status: 'Active',
       NOT: {
@@ -542,7 +542,7 @@ app.get('/api/homepage/shelves', async (req, res) => {
     const budgetPicks = await prisma.product.findMany({
       where: {
         price: { lte: budget },
-        gender: { contains: targetGender, mode: 'insensitive' },
+        gender: { in: [targetGender, 'Unisex', 'unisex'] },
         img: { not: '-' },
         status: 'Active'
       },
@@ -566,7 +566,7 @@ app.get('/api/homepage/shelves', async (req, res) => {
       festivalPicks = await prisma.product.findMany({
         where: {
           OR: orConditions,
-          gender: { contains: targetGender, mode: 'insensitive' },
+          gender: { in: [targetGender, 'Unisex', 'unisex'] },
           img: { not: '-' },
           status: 'Active'
         },
@@ -579,7 +579,7 @@ app.get('/api/homepage/shelves', async (req, res) => {
     const verifiedCandidates = await prisma.product.findMany({
       where: {
         price: { lte: budget },
-        gender: { contains: targetGender, mode: 'insensitive' },
+        gender: { in: [targetGender, 'Unisex', 'unisex'] },
         img: { not: '-' },
         status: 'Active'
       },
@@ -621,7 +621,7 @@ app.get('/api/homepage/shelves', async (req, res) => {
     if (!hasLocalSellers) {
       nationalCatalogFallback = await prisma.product.findMany({
         where: {
-          gender: { contains: targetGender, mode: 'insensitive' },
+          gender: { in: [targetGender, 'Unisex', 'unisex'] },
           img: { not: '-' },
           status: 'Active',
           source: 'imported'
@@ -729,7 +729,7 @@ app.get('/api/homepage/budget-picks', async (req, res) => {
     const candidates = await prisma.product.findMany({
       where: {
         price: { lte: budget },
-        gender: { contains: targetGender, mode: 'insensitive' },
+        gender: { in: [targetGender, 'Unisex', 'unisex'] },
         img: { not: '-' },
         status: 'Active'
       },
@@ -765,7 +765,7 @@ app.get('/api/shelf', authenticateToken, async (req, res) => {
     const candidates = await prisma.product.findMany({
       where: {
         price: { lte: budget },
-        gender: { contains: gender, mode: 'insensitive' },
+        gender: { in: [gender, 'Unisex', 'unisex'] },
         img: { not: '-' },
         status: 'Active'
       },
@@ -817,24 +817,36 @@ app.get('/api/seller/dashboard', authenticateToken, requireRole('SELLER'), async
   try {
     const { city, state } = req.user;
 
-    const popularSearches = await prisma.searchQuery.groupBy({
-      by: ['type'],
-      where: { state, type: { not: 'NA' } },
-      _count: { type: true },
-      orderBy: { _count: { type: 'desc' } },
-      take: 6
+    const rawPopularSearches = await prisma.searchQuery.groupBy({
+      by: ['category'],
+      where: { state, category: { not: 'NA' } },
+      _count: { category: true },
+      orderBy: { _count: { category: 'desc' } },
     });
 
+    // Deduplicate and merge any plural / synonym variants (e.g. 'sarees' -> 'saree', 'kurtas' -> 'kurti')
+    const groupedMap = new Map();
+    for (const search of rawPopularSearches) {
+      const normalizedKey = searchIntelligence.normalizeTerm(search.category);
+      const currentCount = groupedMap.get(normalizedKey) || 0;
+      groupedMap.set(normalizedKey, currentCount + search._count.category);
+    }
+
+    const popularSearches = Array.from(groupedMap.entries())
+      .map(([category, count]) => ({ category, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 6);
+
     const marketInsights = await Promise.all(popularSearches.map(async (search) => {
-      const keyword = search.type;
-      const searchVolume = search._count.type;
+      const keyword = search.category;
+      const searchVolume = search.count;
 
       const supplyCount = await prisma.product.count({
         where: {
           city: city,
           OR: [
-            { name: { contains: keyword, mode: 'insensitive' } },
             { category: { contains: keyword, mode: 'insensitive' } },
+            { name: { contains: keyword, mode: 'insensitive' } },
             { macro_category: { contains: keyword, mode: 'insensitive' } }
           ]
         }
@@ -848,14 +860,31 @@ app.get('/api/seller/dashboard', authenticateToken, requireRole('SELLER'), async
         gapScore = Math.min(Math.round((ratio / 10) * 100), 100);
       }
 
+      // Fetch top specific search phrases typed by consumers under this category
+      const topQueries = await prisma.searchQuery.groupBy({
+        by: ['rawQuery'],
+        where: { 
+          state, 
+          category: { equals: keyword, mode: 'insensitive' }
+        },
+        _count: { rawQuery: true },
+        orderBy: { _count: { rawQuery: 'desc' } },
+        take: 5
+      });
+
       return {
         keyword,
+        category: keyword,
         searchVolume,
         availableProducts: supplyCount,
         gapScore,
         recommendation: gapScore > 75
           ? `High demand for '${keyword}' detected in ${city} with critical supply shortage. Add stock immediately!`
-          : `Market is saturated with '${keyword}'. Compete on price or add unique variations.`
+          : `Market is saturated with '${keyword}'. Compete on price or add unique variations.`,
+        topQueries: topQueries.map(q => ({
+          query: q.rawQuery,
+          count: q._count.rawQuery
+        }))
       };
     }));
 
@@ -863,6 +892,41 @@ app.get('/api/seller/dashboard', authenticateToken, requireRole('SELLER'), async
   } catch (error) {
     console.error('Seller dashboard error:', error);
     res.status(500).json({ error: 'Failed to generate insights' });
+  }
+});
+
+app.get('/api/seller/purchases/csv', async (req, res) => {
+  try {
+    const token = req.query.token;
+    if (!token) return res.status(401).send('Unauthorized');
+    const jwt = require('jsonwebtoken');
+    const userPayload = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret');
+    if (userPayload.role !== 'SELLER' && userPayload.role !== 'ADMIN') return res.status(403).send('Forbidden');
+
+    const globalPurchases = await prisma.purchase.findMany({
+      include: { Product: true },
+      orderBy: { createdAt: 'desc' },
+      take: 5000
+    });
+
+    const headers = ['Date', 'City', 'State', 'Product Category', 'Product Occasion', 'Material', 'Gender', 'Quantity', 'Price At Purchase'];
+    const rows = globalPurchases.map(p => {
+      const date = p.createdAt.toISOString().split('T')[0];
+      const prod = p.Product || {};
+      const cat = (prod.category || 'NA').replace(/,/g, '');
+      const occ = (prod.occasion || 'NA').replace(/,/g, '');
+      const mat = (prod.material || 'NA').replace(/,/g, '');
+      const gender = (prod.gender || 'NA').replace(/,/g, '');
+      return `${date},${p.cityName},${p.stateName},${cat},${occ},${mat},${gender},${p.quantity},${p.priceAtPurchase}`;
+    });
+
+    const csvContent = [headers.join(','), ...rows].join('\n');
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename=global_market_purchases.csv');
+    res.send(csvContent);
+  } catch (err) {
+    console.error('CSV export error:', err);
+    res.status(500).send('Error generating CSV');
   }
 });
 
@@ -1330,14 +1394,22 @@ app.get('/api/admin/sellers', authenticateToken, requireAdmin, async (req, res) 
       }
     });
 
-    const sellersWithStats = await Promise.all(sellers.map(async (seller) => {
+    // Process sequentially to prevent database connection pool exhaustion
+    const sellersWithStats = [];
+    for (const seller of sellers) {
       const productIds = seller.Products.map(p => p.id);
-      const totalReviews = await prisma.review.count({ where: { productId: { in: productIds } } });
-      const complaints = await prisma.review.count({ where: { productId: { in: productIds }, isComplaint: true } });
+      
+      let totalReviews = 0;
+      let complaints = 0;
+      if (productIds.length > 0) {
+        totalReviews = await prisma.review.count({ where: { productId: { in: productIds } } });
+        complaints = await prisma.review.count({ where: { productId: { in: productIds }, isComplaint: true } });
+      }
+
       const complaintRatio = totalReviews > 0 ? Math.round((complaints / totalReviews) * 100) : 0;
       const warningCount = seller.WarningsReceived.filter(w => w.type === 'WARNING').length;
 
-      return {
+      sellersWithStats.push({
         ...seller,
         totalProducts: seller.Products.length,
         totalReviews,
@@ -1346,8 +1418,8 @@ app.get('/api/admin/sellers', authenticateToken, requireAdmin, async (req, res) 
         warningCount,
         canWarn: totalReviews >= 5 && complaintRatio > 20 && warningCount < 2 && !seller.isBlocked,
         canBlock: totalReviews >= 5 && complaintRatio > 40 && !seller.isBlocked
-      };
-    }));
+      });
+    }
 
     res.json({ sellers: sellersWithStats });
   } catch (error) {

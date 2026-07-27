@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { API_BASE_URL } from '../../config';
 import { useTheme } from '../../context/ThemeContext';
 import { useNavigate } from 'react-router-dom';
 import { ShoppingBag, MapPin, User as UserIcon, LogOut, Sun, Moon, CloudRain, ThermometerSnowflake, Search, UserCircle, BadgeCheck } from 'lucide-react';
@@ -10,13 +11,21 @@ import MicButton from '../MicButton';
 
 const fetchFallbackPincode = async (cityName) => {
   try {
-    console.log(`[Fallback Ping] Fetching pincode dynamically for: ${cityName}`);
-    const res = await fetch(`https://api.postalpincode.in/postoffice/${cityName}`);
-    const data = await res.json();
-    if (data && data[0] && data[0].Status === "Success" && data[0].PostOffice && data[0].PostOffice.length > 0) {
-      const pin = data[0].PostOffice[0].Pincode;
-      console.log(`[Fallback Ping] Success! Found pincode: ${pin}`);
-      return pin;
+    if (!cityName) return null;
+    // Clean district/urban suffixes e.g. "Bengaluru Urban" -> "Bengaluru" or "Bangalore"
+    const cleanedName = cityName.replace(/\s+(urban|rural|district|division|subdivision|city)/gi, '').trim();
+    console.log(`[Fallback Ping] Fetching pincode dynamically for: ${cityName} (cleaned: ${cleanedName})`);
+
+    // Try cleaned name first, then fallback to original name
+    for (const nameToTry of [cleanedName, cityName]) {
+      if (!nameToTry) continue;
+      const res = await fetch(`https://api.postalpincode.in/postoffice/${encodeURIComponent(nameToTry)}`);
+      const data = await res.json();
+      if (data && data[0] && data[0].Status === "Success" && data[0].PostOffice && data[0].PostOffice.length > 0) {
+        const pin = data[0].PostOffice[0].Pincode;
+        console.log(`[Fallback Ping] Success! Found pincode: ${pin}`);
+        return pin;
+      }
     }
   } catch (err) {
     console.error("Fallback pincode fetch failed:", err);
@@ -91,7 +100,7 @@ export default function MainAppContent() {
         const activePin = user?.exactLocation?.addressInfo?.postcode || user?.pincode;
         if (activePin) queryParams.pincode = activePin;
         const query = new URLSearchParams(queryParams);
-        const res = await fetch(`http://localhost:5000/api/homepage/shelves?${query}`, {
+        const res = await fetch(`${API_BASE_URL}/homepage/shelves?${query}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (res.ok) {
@@ -106,7 +115,7 @@ export default function MainAppContent() {
     };
 
     fetchShelves();
-  }, [user?.city, user?.state, user?.gender]);
+  }, [user?.city, user?.state, user?.gender, user?.exactLocation?.addressInfo?.postcode, user?.pincode]);
 
   // Separate effect to update ONLY the budget shelf without reloading the whole page
   useEffect(() => {
@@ -121,7 +130,7 @@ export default function MainAppContent() {
           budget: debouncedBudget,
           gender: user?.gender || 'Men'
         });
-        const res = await fetch(`http://localhost:5000/api/shelf?${query}`, {
+        const res = await fetch(`${API_BASE_URL}/shelf?${query}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (res.ok) {
@@ -146,7 +155,7 @@ export default function MainAppContent() {
         setLoadingBudgetSlider(false);
       }
     };
-    
+
     fetchBudgetShelfOnly();
   }, [debouncedBudget, user?.gender]);
 
@@ -160,9 +169,10 @@ export default function MainAppContent() {
             const data = await res.json();
             const detectCity = data.address.city || data.address.town || data.address.state_district || "Unknown";
             let finalAddressInfo = { ...data.address };
-            
+
             if (!finalAddressInfo.postcode) {
-              const fallbackPin = await fetchFallbackPincode(detectCity);
+              const localityName = data.address.suburb || data.address.neighbourhood || data.address.city_district || detectCity;
+              const fallbackPin = await fetchFallbackPincode(localityName) || await fetchFallbackPincode(detectCity);
               if (fallbackPin) {
                 finalAddressInfo.postcode = fallbackPin;
               }
@@ -208,22 +218,23 @@ export default function MainAppContent() {
           <div className="p-2 bg-pink-600 rounded-lg text-white">
             <ShoppingBag className="w-6 h-6" />
           </div>
-          <div>
-            <h1 className="text-xl font-bold flex items-center gap-2">
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-rose-400">Bharat AI</span>
+          <div className="flex flex-col">
+            <h1 className="text-xl font-bold flex items-center gap-2 leading-snug pb-0.5">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-rose-400">MynStyle AI</span>
             </h1>
+            <span className="text-[10px] sm:text-xs font-semibold text-pink-600 dark:text-pink-400 tracking-wide mt-1">Your city. Your shelf. Your style</span>
           </div>
         </div>
 
         <div className="flex-1 max-w-xl mx-4 hidden md:block">
-          <form 
+          <form
             onSubmit={async (e) => {
               e.preventDefault();
-              if(!searchQuery.trim()) return;
+              if (!searchQuery.trim()) return;
               try {
                 // Navigate immediately to the new search results page
                 navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
-              } catch(err) {
+              } catch (err) {
                 console.error('Navigation failed', err);
               }
             }}
@@ -234,7 +245,7 @@ export default function MainAppContent() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search for clothes (e.g., 'Red Velvet Dress')..." 
+              placeholder="Search for clothes (e.g., 'Red Velvet Dress')..."
               className="bg-transparent text-sm focus:outline-none text-slate-900 dark:text-slate-200 w-full placeholder:text-slate-500"
             />
             <MicButton onResult={(text) => { setSearchQuery(text); navigate(`/search?q=${encodeURIComponent(text)}`); }} />
@@ -254,14 +265,14 @@ export default function MainAppContent() {
                       value={customCityInput}
                       onChange={(e) => setCustomCityInput(e.target.value)}
                       placeholder="Enter city..."
-                      className="bg-transparent text-sm focus:outline-none text-slate-200 w-36 border-b border-pink-500/50 focus:border-pink-500 pb-0.5"
+                      className="bg-transparent text-sm focus:outline-none text-slate-900 dark:text-slate-200 w-36 border-b border-pink-500/50 focus:border-pink-500 pb-0.5 placeholder:text-slate-400"
                       autoFocus
                     />
-                    <button type="button" onClick={() => { setCustomCityMode(false); setCustomCityInput(''); setSuggestions([]); }} className="text-xs text-slate-400 hover:text-white transition">Cancel</button>
+                    <button type="button" onClick={() => { setCustomCityMode(false); setCustomCityInput(''); setSuggestions([]); }} className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition">Cancel</button>
                     {isSearching && <div className="w-3 h-3 border border-pink-500 border-t-transparent rounded-full animate-spin"></div>}
                   </form>
                   {suggestions.length > 0 && (
-                    <div className="absolute top-full left-0 mt-2 w-64 bg-slate-800 border border-slate-700 rounded-lg shadow-xl shadow-slate-950 z-50 overflow-hidden text-xs max-h-64 overflow-y-auto">
+                    <div className="absolute top-full left-0 mt-2 w-64 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl z-50 overflow-hidden text-xs max-h-64 overflow-y-auto">
                       {suggestions.map((loc) => {
                         const cityName = loc.address?.city || loc.address?.town || loc.address?.state_district || loc.name;
                         return (
@@ -286,10 +297,10 @@ export default function MainAppContent() {
                               setCustomCityInput('');
                               setSuggestions([]);
                             }}
-                            className="p-2 cursor-pointer hover:bg-slate-700 border-b border-slate-700/50 text-slate-200 flex flex-col justify-center"
+                            className="p-2 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 border-b border-slate-100 dark:border-slate-700/50 text-slate-800 dark:text-slate-200 flex flex-col justify-center"
                           >
-                            <span className="font-bold text-pink-400 capitalize">{cityName}</span>
-                            <span className="text-[10px] text-slate-400 truncate">{loc.display_name}</span>
+                            <span className="font-bold text-pink-500 dark:text-pink-400 capitalize">{cityName}</span>
+                            <span className="text-[10px] text-slate-500 dark:text-slate-400 truncate">{loc.display_name}</span>
                           </div>
                         )
                       })}
@@ -299,17 +310,19 @@ export default function MainAppContent() {
               ) : (
                 <div className="flex items-center gap-2">
                   <div className="flex flex-col">
-                    <span className="text-sm font-medium text-slate-900 dark:text-slate-100 min-w-[3rem] px-1 group relative flex items-center">
-                      {user?.city || 'Select city'}
-                    </span>
-                    {user?.exactLocation?.displayName && (
-                      <span className="text-[10px] text-slate-400 px-1 max-w-[220px] truncate" title={user.exactLocation.displayName}>
-                        {user.exactLocation.displayName}
+                    <div className="flex items-center gap-2 px-1">
+                      <span className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                        {user?.city || 'Select city'}
                       </span>
-                    )}
-                    {user?.exactLocation?.addressInfo?.postcode && (
-                      <span className="text-[9px] font-bold text-emerald-400 px-1">
-                        PIN: {user.exactLocation.addressInfo.postcode}
+                      {(user?.exactLocation?.addressInfo?.postcode || user?.pincode) && (
+                        <span className="text-[11px] font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 dark:bg-emerald-500/20 border border-emerald-500/30 px-2 py-0.5 rounded-md shadow-sm">
+                          PIN: {user?.exactLocation?.addressInfo?.postcode || user?.pincode}
+                        </span>
+                      )}
+                    </div>
+                    {user?.exactLocation?.displayName && (
+                      <span className="text-[10px] text-slate-500 dark:text-slate-400 px-1 max-w-[220px] truncate" title={user.exactLocation.displayName}>
+                        {user.exactLocation.displayName}
                       </span>
                     )}
                   </div>
@@ -322,16 +335,16 @@ export default function MainAppContent() {
                         updateCity(e.target.value);
                       }
                     }}
-                    className="bg-transparent text-slate-400 text-xs focus:outline-none cursor-pointer hover:text-slate-200"
+                    className="bg-transparent text-slate-500 dark:text-slate-400 text-xs focus:outline-none cursor-pointer hover:text-slate-900 dark:hover:text-slate-200"
                     title="Change location"
                   >
-                    <option value="" disabled>Change...</option>
+                    <option value="" disabled className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200">Change...</option>
                     {cities.map(c => (
-                      <option key={c.cityName} value={c.cityName} className="bg-slate-900 text-slate-200">
+                      <option key={c.cityName} value={c.cityName} className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200">
                         {c.cityName}
                       </option>
                     ))}
-                    <option value="custom" className="bg-slate-900 text-pink-400 font-bold">+ Custom Search</option>
+                    <option value="custom" className="bg-white dark:bg-slate-900 text-pink-600 dark:text-pink-400 font-bold">+ Custom Search</option>
                   </select>
                 </div>
               )}
@@ -351,7 +364,7 @@ export default function MainAppContent() {
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 text-sm bg-slate-100 dark:bg-slate-850 px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-800 transition-colors">
+            <div className="flex items-center gap-2 text-sm bg-slate-100 dark:bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-800 transition-colors">
               <UserIcon className="w-4 h-4 text-purple-400" />
               <div className="text-right">
                 <p className="font-semibold text-slate-900 dark:text-slate-200 leading-none">{user?.name}</p>
@@ -387,16 +400,27 @@ export default function MainAppContent() {
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-8 py-8 flex flex-col gap-6">
 
-        {/* Context bar / Controls */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-sm dark:shadow-xl transition-colors">
-          <div className="flex items-center gap-4">
+        {/* Context bar / Greeting & Weather Forecast */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm dark:shadow-xl transition-colors">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 w-full">
+            <div>
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                Hi, {user?.name || 'Customer'} <span className="inline-block animate-bounce">👋</span>
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                Welcome back! Here is your current weather forecast and personalized style recommendations for <span className="font-semibold text-pink-600 dark:text-pink-400">{user?.city || 'your location'}</span>.
+              </p>
+            </div>
+
             {shelves?.context && (
-              <div className="bg-slate-50 dark:bg-slate-950 px-4 py-2 rounded-xl flex items-center gap-3 border border-slate-200 dark:border-slate-800 transition-colors">
-                {getClimateIcon(shelves.context.climate)}
+              <div className="bg-slate-50 dark:bg-slate-950 px-4 py-3 rounded-xl flex items-center gap-3 border border-slate-200 dark:border-slate-800 transition-colors shrink-0">
+                <div className="p-2 bg-pink-500/10 dark:bg-pink-500/20 rounded-lg">
+                  {getClimateIcon(shelves.context.climate)}
+                </div>
                 <div>
-                  <div className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Current Forecast</div>
-                  <div className="font-medium text-slate-700 dark:text-slate-200">
-                    <span className="font-bold text-slate-900 dark:text-white">{shelves.context.temperature}°C</span>, {shelves.context.climate}
+                  <div className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Weather Forecast</div>
+                  <div className="text-xs font-medium text-slate-700 dark:text-slate-200">
+                    <span className="font-bold text-slate-900 dark:text-white text-sm">{shelves.context.temperature}°C</span>, {shelves.context.climate}
                   </div>
                 </div>
               </div>
@@ -529,7 +553,7 @@ const Shelf = ({ title, products, isLocalShelf = false, noLocalSellers = false, 
                 </div>
               )}
               {p.verifiedSeller && (
-                <div className="inline-flex items-center gap-1 text-[10px] font-bold text-sky-300 bg-sky-950/40 border border-sky-800/50 px-2 py-0.5 rounded-full mb-2 w-fit">
+                <div className="inline-flex items-center gap-1 text-[10px] font-bold text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800/50 px-2 py-0.5 rounded-full mb-2 w-fit">
                   <BadgeCheck className="w-3 h-3" /> Verified Local Seller
                 </div>
               )}
@@ -544,7 +568,7 @@ const Shelf = ({ title, products, isLocalShelf = false, noLocalSellers = false, 
                   <span className="text-[10px] font-bold text-amber-500 dark:text-amber-400">⭐ {p.rating}</span>
                 </div>
               </div>
-              
+
               <button
                 onClick={(e) => {
                   e.stopPropagation();

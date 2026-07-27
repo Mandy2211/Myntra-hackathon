@@ -1,13 +1,23 @@
 const { ChatOpenAI } = require('@langchain/openai');
 const { z } = require('zod');
 
-// We use meta-llama/llama-3.1-8b-instruct on OpenRouter because it has excellent latency out of the box for JSON extraction
+// Primary LLM: OpenRouter (Gemma 4)
 const llm = new ChatOpenAI({
   apiKey: process.env.OPENROUTER_API_KEY,
   configuration: {
     baseURL: 'https://openrouter.ai/api/v1',
   },
   modelName: 'google/gemma-4-26b-a4b-it:free',
+  temperature: 0,
+});
+
+// Fallback LLM: Groq (llama-3.3-70b)
+const fallbackLlm = new ChatOpenAI({
+  apiKey: process.env.GROQ_API_KEY,
+  configuration: {
+    baseURL: 'https://api.groq.com/openai/v1',
+  },
+  modelName: 'llama-3.3-70b-versatile',
   temperature: 0,
 });
 
@@ -30,6 +40,10 @@ const extractor = llm.withStructuredOutput(enrichmentSchema, {
   name: "productIntelligence"
 });
 
+const fallbackExtractor = fallbackLlm.withStructuredOutput(enrichmentSchema, {
+  name: "productIntelligence"
+});
+
 async function extractIntelligence(productDetails, sellerDetails) {
   const prompt = `You are an expert hyperlocal telemetry AI for a storefront in India.
 Your job is to read raw product details uploaded by a seller and extract exact categorical mapping tags.
@@ -45,12 +59,15 @@ Return the optimal JSON extraction. Pay close attention to Material. If Material
 If the description mentions rain, Monsoon/Rainy.`;
 
   try {
-    const result = await extractor.invoke(prompt);
-    return result;
+    return await extractor.invoke(prompt);
   } catch (err) {
-    console.error("LLM Extraction Error", err);
-    // Silent Fallback if API fails
-    return null;
+    console.warn("Primary LLM failed, attempting fallback to Groq:", err.message);
+    try {
+      return await fallbackExtractor.invoke(prompt);
+    } catch (fallbackErr) {
+      console.error("LLM Extraction Error (Primary and Fallback failed)", fallbackErr);
+      return null;
+    }
   }
 }
 
